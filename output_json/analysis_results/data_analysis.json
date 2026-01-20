@@ -1,0 +1,162 @@
+[
+  {
+    "id": 15,
+    "name": "Изоцианат",
+    "revenue": 15100.0,
+    "ABC": "A",
+    "XYZ": "Y",
+    "ABC_XYZ": "AY"
+  },
+  {
+    "id": 7,
+    "name": "Реактинт",
+    "revenue": 13000.0,
+    "ABC": "A",
+    "XYZ": "Z",
+    "ABC_XYZ": "AZ"
+  },
+  {
+    "id": 3,
+    "name": "Эпоксидная смола",
+    "revenue": 11000.0,
+    "ABC": "A",
+    "XYZ": "X",
+    "ABC_XYZ": "AX"
+  },
+  {
+    "id": 14,
+    "name": "Диоксид титана",
+    "revenue": 10400.0,
+    "ABC": "A",
+    "XYZ": "Z",
+    "ABC_XYZ": "AZ"
+  },
+  {
+    "id": 12,
+    "name": "Оксид магния",
+    "revenue": 9700.0,
+    "ABC": "A",
+    "XYZ": "Z",
+    "ABC_XYZ": "AZ"
+  },
+  {
+    "id": 9,
+    "name": "Отвердитель",
+    "revenue": 8050.0,
+    "ABC": "A",
+    "XYZ": "X",
+    "ABC_XYZ": "AX"
+  },
+  {
+    "id": 4,
+    "name": "Меркаптоэтанол",
+    "revenue": 7500.0,
+    "ABC": "A",
+    "XYZ": "Z",
+    "ABC_XYZ": "AZ"
+  },
+  {
+    "id": 8,
+    "name": "Сополимер",
+    "revenue": 6000.0,
+    "ABC": "A",
+    "XYZ": "X",
+    "ABC_XYZ": "AX"
+  },
+  {
+    "id": 2,
+    "name": "Ваннат",
+    "revenue": 5600.0,
+    "ABC": "A",
+    "XYZ": "Z",
+    "ABC_XYZ": "AZ"
+  },
+  {
+    "id": 11,
+    "name": "Молекулярные сита",
+    "revenue": 5400.0,
+    "ABC": "A",
+    "XYZ": "Z",
+    "ABC_XYZ": "AZ"
+  },
+  {
+    "id": 17,
+    "name": "Стеарат цинка",
+    "revenue": 5000.0,
+    "ABC": "A",
+    "XYZ": "Y",
+    "ABC_XYZ": "AY"
+  },
+  {
+    "id": 16,
+    "name": "Каучук",
+    "revenue": 4600.0,
+    "ABC": "B",
+    "XYZ": "X",
+    "ABC_XYZ": "BX"
+  },
+  {
+    "id": 20,
+    "name": "Полиолы",
+    "revenue": 4450.0,
+    "ABC": "B",
+    "XYZ": "X",
+    "ABC_XYZ": "BX"
+  },
+  {
+    "id": 6,
+    "name": "Антиоксидант",
+    "revenue": 4300.0,
+    "ABC": "B",
+    "XYZ": "Z",
+    "ABC_XYZ": "BZ"
+  },
+  {
+    "id": 19,
+    "name": "Перхлорэтилен",
+    "revenue": 3200.0,
+    "ABC": "B",
+    "XYZ": "Y",
+    "ABC_XYZ": "BY"
+  },
+  {
+    "id": 18,
+    "name": "Волокно",
+    "revenue": 3000.0,
+    "ABC": "C",
+    "XYZ": "Z",
+    "ABC_XYZ": "CZ"
+  },
+  {
+    "id": 5,
+    "name": "Касторовое масло",
+    "revenue": 2100.0,
+    "ABC": "C",
+    "XYZ": "Z",
+    "ABC_XYZ": "CZ"
+  },
+  {
+    "id": 10,
+    "name": "Канифоль",
+    "revenue": 1500.0,
+    "ABC": "C",
+    "XYZ": "X",
+    "ABC_XYZ": "CX"
+  },
+  {
+    "id": 13,
+    "name": "Скипидар",
+    "revenue": 900.0,
+    "ABC": "C",
+    "XYZ": "Z",
+    "ABC_XYZ": "CZ"
+  },
+  {
+    "id": 1,
+    "name": "Резиновая крошка",
+    "revenue": 400.0,
+    "ABC": "C",
+    "XYZ": "Z",
+    "ABC_XYZ": "CZ"
+  }
+]

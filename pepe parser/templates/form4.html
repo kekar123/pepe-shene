@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Загрузка XLS-файлов</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 500px;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            padding: 30px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 8px;
+            font-size: 24px;
+        }
+        
+        .description {
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .file-upload-area {
+            border: 2px dashed #3498db;
+            border-radius: 8px;
+            padding: 30px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background-color: #f8fafc;
+        }
+        
+        .file-upload-area:hover {
+            border-color: #2980b9;
+            background-color: #f0f7ff;
+        }
+        
+        .file-upload-area.dragover {
+            border-color: #1abc9c;
+            background-color: #e8f6f3;
+        }
+        
+        .upload-icon {
+            font-size: 36px;
+            color: #3498db;
+            margin-bottom: 10px;
+        }
+        
+        .file-upload-text {
+            font-size: 16px;
+            margin-bottom: 8px;
+            color: #2c3e50;
+        }
+        
+        .file-upload-hint {
+            color: #7f8c8d;
+            font-size: 12px;
+        }
+        
+        #file-input {
+            display: none;
+        }
+        
+        .selected-file {
+            margin-top: 15px;
+            padding: 12px;
+            background-color: #e8f4fc;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .file-info {
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+        }
+        
+        .file-icon {
+            font-size: 20px;
+            color: #3498db;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+        
+        .file-name {
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .file-size {
+            color: #7f8c8d;
+            font-size: 12px;
+            margin-left: 10px;
+            flex-shrink: 0;
+        }
+        
+        .remove-file {
+            background: none;
+            border: none;
+            color: #e74c3c;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 5px;
+            flex-shrink: 0;
+        }
+        
+        .buttons-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+        
+        .btn-primary:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background-color: #2ecc71;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #27ae60;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 20px;
+            color: #7f8c8d;
+            font-size: 12px;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-file-excel"></i> Загрузка XLS-файла</h1>
+            <p class="description">Выберите файл Excel для анализа</p>
+        </header>
+        
+        <form id="uploadForm">
+            <div class="form-group">
+                <div class="file-upload-area" id="dropArea">
+                    <div class="upload-icon">
+                        <i class="fas fa-file-upload"></i>
+                    </div>
+                    <div class="file-upload-text">Выберите файл</div>
+                    <div class="file-upload-hint">Форматы: .xls, .xlsx (до 10 МБ)</div>
+                    <input type="file" id="file-input" accept=".xls,.xlsx">
+                </div>
+                
+                <div id="selectedFileContainer" style="display: none;">
+                    <div class="selected-file">
+                        <div class="file-info">
+                            <i class="fas fa-file-excel file-icon"></i>
+                            <div class="file-name" id="fileName">Файл не выбран</div>
+                            <div class="file-size" id="fileSize">0 KB</div>
+                        </div>
+                        <button type="button" class="remove-file" id="removeFile">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="buttons-container">
+                <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
+                    <i class="fas fa-upload"></i> Загрузить файл
+                </button>
+                
+                <button type="button" class="btn btn-secondary" id="reorderBtn">
+                    <i class="fas fa-warehouse"></i> Пересортировка склада
+                </button>
+            </div>
+        </form>
+        
+        <footer>
+            <p>Файл будет обработан автоматически</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const fileInput = document.getElementById('file-input');
+            const dropArea = document.getElementById('dropArea');
+            const selectedFileContainer = document.getElementById('selectedFileContainer');
+            const fileName = document.getElementById('fileName');
+            const fileSize = document.getElementById('fileSize');
+            const removeFileBtn = document.getElementById('removeFile');
+            const submitBtn = document.getElementById('submitBtn');
+            const reorderBtn = document.getElementById('reorderBtn');
+            const uploadForm = document.getElementById('uploadForm');
+            
+            let selectedFile = null;
+            
+            // Обработка перетаскивания файлов
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropArea.addEventListener(eventName, highlight, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, unhighlight, false);
+            });
+            
+            function highlight() {
+                dropArea.classList.add('dragover');
+            }
+            
+            function unhighlight() {
+                dropArea.classList.remove('dragover');
+            }
+            
+            // Обработка сброса файлов
+            dropArea.addEventListener('drop', handleDrop, false);
+            dropArea.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', handleFileSelect);
+            
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                
+                if (files.length > 0) {
+                    handleFile(files[0]);
+                }
+            }
+            
+            function handleFileSelect(e) {
+                const files = e.target.files;
+                
+                if (files.length > 0) {
+                    handleFile(files[0]);
+                }
+            }
+            
+            function handleFile(file) {
+                // Проверка типа файла
+                const validTypes = [
+                    'application/vnd.ms-excel',
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                ];
+                
+                const fileExtension = file.name.split('.').pop().toLowerCase();
+                const isValidType = validTypes.includes(file.type) || 
+                                   ['xls', 'xlsx'].includes(fileExtension);
+                
+                if (!isValidType) {
+                    alert('Неверный формат файла. Пожалуйста, загрузите файл Excel (.xls или .xlsx)');
+                    return;
+                }
+                
+                // Проверка размера файла (10 МБ максимум)
+                const maxSize = 10 * 1024 * 1024; // 10 МБ
+                if (file.size > maxSize) {
+                    alert('Файл слишком большой. Максимальный размер: 10 МБ');
+                    return;
+                }
+                
+                selectedFile = file;
+                fileName.textContent = file.name;
+                fileSize.textContent = formatFileSize(file.size);
+                selectedFileContainer.style.display = 'block';
+                submitBtn.disabled = false;
+            }
+            
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+            
+            // Удаление выбранного файла
+            removeFileBtn.addEventListener('click', function() {
+                selectedFile = null;
+                fileInput.value = '';
+                selectedFileContainer.style.display = 'none';
+                submitBtn.disabled = true;
+            });
+            
+            // Обработка кнопки "Пересортировка склада"
+            reorderBtn.addEventListener('click', async function() {
+                try {
+                    reorderBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Обработка...';
+                    reorderBtn.disabled = true;
+                    
+                    const response = await fetch('/reorder-warehouse', {
+                        method: 'POST'
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        alert(`✅ ${result.message}\n\n` +
+                              `Оптимизировано позиций: ${result.details.optimized_positions}\n` +
+                              `Сэкономлено места: ${result.details.saved_space}\n` +
+                              `Прирост эффективности: ${result.details.estimated_efficiency_gain}`);
+                    } else {
+                        alert('Ошибка: ' + result.error);
+                    }
+                    
+                } catch (error) {
+                    console.error('Ошибка:', error);
+                    alert('Ошибка при пересортировке склада');
+                } finally {
+                    reorderBtn.innerHTML = '<i class="fas fa-warehouse"></i> Пересортировка склада';
+                    reorderBtn.disabled = false;
+                }
+            });
+            
+            // Отправка формы (загрузка файла)
+            uploadForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                if (!selectedFile) {
+                    alert('Пожалуйста, выберите файл для загрузки');
+                    return;
+                }
+                
+                // Показываем индикатор загрузки
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Обработка...';
+                submitBtn.disabled = true;
+                
+                try {
+                    // Создаем FormData
+                    const formData = new FormData();
+                    formData.append('file', selectedFile);
+                    
+                    // Отправляем файл на сервер
+                    const response = await fetch('/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        // Показываем результаты
+                        showResults(result);
+                        
+                        // Сброс формы
+                        selectedFile = null;
+                        fileInput.value = '';
+                        selectedFileContainer.style.display = 'none';
+                    } else {
+                        alert('Ошибка: ' + result.error);
+                    }
+                    
+                } catch (error) {
+                    console.error('Ошибка загрузки:', error);
+                    alert('Ошибка при загрузке файла');
+                } finally {
+                    // Восстанавливаем кнопку
+                    submitBtn.innerHTML = '<i class="fas fa-upload"></i> Загрузить файл';
+                    submitBtn.disabled = false;
+                }
+            });
+            
+            // Функция для отображения результатов
+            function showResults(result) {
+                const message = `✅ ${result.message}\n\n` +
+                               `📊 Статистика:\n` +
+                               `• Всего товаров: ${result.stats.total_items}\n` +
+                               `• ABC распределение: ${JSON.stringify(result.stats.abc_distribution)}\n` +
+                               `• XYZ распределение: ${JSON.stringify(result.stats.xyz_distribution)}\n` +
+                               `• Матрица ABC-XYZ: ${JSON.stringify(result.stats.abc_xyz_matrix)}\n\n` +
+                               `📥 Файлы сохранены в проекте.\n` +
+                               `Вы можете скачать их по ссылкам.`;
+                
+                // Создаем модальное окно с результатами
+                const modal = document.createElement('div');
+                modal.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0,0,0,0.5);
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    z-index: 1000;
+                `;
+                
+                const modalContent = document.createElement('div');
+                modalContent.style.cssText = `
+                    background: white;
+                    padding: 30px;
+                    border-radius: 12px;
+                    max-width: 600px;
+                    width: 90%;
+                    max-height: 80vh;
+                    overflow-y: auto;
+                `;
+                
+                modalContent.innerHTML = `
+                    <h2 style="color: #2c3e50; margin-bottom: 20px;">
+                        <i class="fas fa-check-circle" style="color: #27ae60;"></i> Файл обработан
+                    </h2>
+                    <div style="margin-bottom: 20px; white-space: pre-line;">${message}</div>
+                    <div style="display: flex; gap: 10px;">
+                        <button id="downloadJson" style="
+                            padding: 10px 20px;
+                            background: #3498db;
+                            color: white;
+                            border: none;
+                            border-radius: 6px;
+                            cursor: pointer;
+                        ">
+                            <i class="fas fa-download"></i> Скачать JSON
+                        </button>
+                        <button id="downloadAnalysis" style="
+                            padding: 10px 20px;
+                            background: #2ecc71;
+                            color: white;
+                            border: none;
+                            border-radius: 6px;
+                            cursor: pointer;
+                        ">
+                            <i class="fas fa-chart-bar"></i> Скачать анализ
+                        </button>
+                        <button id="closeModal" style="
+                            padding: 10px 20px;
+                            background: #95a5a6;
+                            color: white;
+                            border: none;
+                            border-radius: 6px;
+                            cursor: pointer;
+                        ">
+                            Закрыть
+                        </button>
+                    </div>
+                `;
+                
+                modal.appendChild(modalContent);
+                document.body.appendChild(modal);
+                
+                // Обработчики кнопок
+                modalContent.querySelector('#downloadJson').addEventListener('click', () => {
+                    window.open(result.download_links.json, '_blank');
+                });
+                
+                modalContent.querySelector('#downloadAnalysis').addEventListener('click', () => {
+                    window.open(result.download_links.analysis, '_blank');
+                });
+                
+                modalContent.querySelector('#closeModal').addEventListener('click', () => {
+                    document.body.removeChild(modal);
+                });
+                
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        document.body.removeChild(modal);
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
