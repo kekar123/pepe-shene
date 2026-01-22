@@ -4,7 +4,7 @@ import os
 import json
 from werkzeug.utils import secure_filename
 from pathlib import Path
-from parser import xls_to_json_single
+from excel_parser import xls_to_json_single
 from analyzer import perform_abc_xyz_analysis
 import pandas as pd
 
