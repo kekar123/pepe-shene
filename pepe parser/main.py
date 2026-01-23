@@ -1,6 +1,6 @@
 import sys
 from pathlib import Path
-from parser import xls_to_json_batch, xls_to_json_single
+from excel_parser import xls_to_json_batch, xls_to_json_single
 from analyzer import perform_abc_xyz_analysis, analyze_folder
 
 def main():
