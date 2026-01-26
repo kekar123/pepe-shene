@@ -18,6 +18,7 @@ sys.path.insert(0, parent_dir)
 
 try:
     from db.database import db
+    from services.data_loader import JSONToDBLoader
     DB_AVAILABLE = True
 except ImportError as e:
     print(f"⚠️  Модули БД не найдены: {e}")
@@ -106,33 +107,21 @@ def upload_file():
         
         if DB_AVAILABLE:
             try:
-                # Импортируем загрузчик здесь, чтобы избежать циклических импортов
-                sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-                try:
-                    from services.data_loader import JSONToDBLoader
-                    loader = JSONToDBLoader()
-                    db_result = loader.load_from_json(analysis_result)
-                    db_info = {
-                        'loaded': True,
-                        'store_items': db_result.get('store_inserted', 0),
-                        'analysis_items': db_result.get('analysis_inserted', 0),
-                        'errors': db_result.get('errors', [])
-                    }
-                    print(f"✅ Данные загружены в БД: {db_info['store_items']} товаров")
-                except ImportError as e:
-                    db_info['errors'] = [f"Не удалось импортировать загрузчик: {e}"]
-                except Exception as db_error:
-                    db_info['errors'] = [f"Ошибка при загрузке в БД: {db_error}"]
-            except Exception as e:
-                db_info['errors'] = [f"Общая ошибка БД: {e}"]
+                loader = JSONToDBLoader()
+                db_result = loader.load_from_json(analysis_result)
+                db_info = {
+                    'loaded': True,
+                    'store_items': db_result.get('store_inserted', 0),
+                    'analysis_items': db_result.get('analysis_inserted', 0),
+                    'errors': db_result.get('errors', [])
+                }
+            except Exception as db_error:
+                db_info['errors'] = [str(db_error)]
         # ======================================================
         
         # Читаем результаты анализа
-        try:
-            with open(analysis_result, 'r', encoding='utf-8') as f:
-                analysis_data = json.load(f)
-        except Exception as e:
-            return jsonify({'error': f'Ошибка чтения результатов анализа: {e}'}), 500
+        with open(analysis_result, 'r', encoding='utf-8') as f:
+            analysis_data = json.load(f)
         
         # Подсчитываем статистику
         abc_stats = {}
@@ -150,7 +139,7 @@ def upload_file():
             'original_file': filename,
             'json_file': json_result['file_name'],
             'analysis_file': Path(analysis_result).name,
-            'db_info': db_info,
+            'db_info': db_info,  # ДОБАВЛЕНО
             'stats': {
                 'total_items': len(analysis_data),
                 'abc_distribution': abc_stats,
@@ -253,12 +242,6 @@ def load_json_to_db():
             else:
                 return jsonify({'success': False, 'error': f'Файл не найден: {data["file_path"]}'}), 404
         
-        # Импортируем загрузчик
-        try:
-            from services.data_loader import JSONToDBLoader
-        except ImportError:
-            return jsonify({'success': False, 'error': 'Модуль загрузки данных не найден'}), 500
-        
         # Загружаем данные в БД
         loader = JSONToDBLoader()
         result = loader.load_from_json(json_file_path)
@@ -289,7 +272,14 @@ def get_store_items():
             result.append({
                 'id': item.id,
                 'product_name': item.product_name,
-                'revenue': float(item.revenue) if item.revenue else 0,
+                'weight': float(item.product_weight) if item.product_weight else 0,
+                'city_from': item.city_from,
+                'city_to': item.city_to,
+                'arrival_date': item.arrival_date.isoformat() if item.arrival_date else None,
+                'departure_date': item.departure_date.isoformat() if item.departure_date else None,
+                'status': item.status,
+                'storage_cell': item.storage_cell,
+                'current_location': item.current_location,
                 'created_at': item.created_at.isoformat() if item.created_at else None
             })
         
@@ -313,7 +303,7 @@ def get_analysis():
         session = db.get_session()
         from db.models import Analysis
         
-        analyses = session.query(Analysis).all()
+        analyses = session.query(Analysis).filter(Analysis.is_active == True).all()
         
         result = []
         for analysis in analyses:
@@ -323,7 +313,9 @@ def get_analysis():
                 'abc_category': analysis.abc_category,
                 'xyz_category': analysis.xyz_category,
                 'abc_xyz_category': analysis.abc_xyz_category,
+                'recommended_cell': analysis.recommended_cell,
                 'revenue': float(analysis.revenue) if analysis.revenue else 0,
+                'turnover_rate': float(analysis.turnover_rate) if analysis.turnover_rate else 0,
                 'analysis_date': analysis.analysis_date.isoformat() if analysis.analysis_date else None
             })
         
@@ -340,3 +332,8 @@ def get_analysis():
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
+
+
+
+
+#====================================БДДДДДДД МАТОЛИИИИИИИБ
