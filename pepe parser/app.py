@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template, send_from_directory, send_file
+from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
 import os
 import json
@@ -25,9 +25,7 @@ except ImportError as e:
     DB_AVAILABLE = False
 # ==========================================================
 
-app = Flask(__name__, 
-            static_folder='pepe parser/static',
-            template_folder='pepe parser/templates')
+app = Flask(__name__)
 CORS(app)
 
 # =============== ИНИЦИАЛИЗАЦИЯ БД ===============
@@ -58,7 +56,7 @@ def allowed_file(filename):
 @app.route('/')
 def index():
     """Главная страница с формой"""
-    return render_template('index.html')
+    return render_template('form4.html')
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -274,7 +272,14 @@ def get_store_items():
             result.append({
                 'id': item.id,
                 'product_name': item.product_name,
-                'revenue': float(item.revenue) if item.revenue else 0,
+                'weight': float(item.product_weight) if item.product_weight else 0,
+                'city_from': item.city_from,
+                'city_to': item.city_to,
+                'arrival_date': item.arrival_date.isoformat() if item.arrival_date else None,
+                'departure_date': item.departure_date.isoformat() if item.departure_date else None,
+                'status': item.status,
+                'storage_cell': item.storage_cell,
+                'current_location': item.current_location,
                 'created_at': item.created_at.isoformat() if item.created_at else None
             })
         
@@ -298,7 +303,7 @@ def get_analysis():
         session = db.get_session()
         from db.models import Analysis
         
-        analyses = session.query(Analysis).all()
+        analyses = session.query(Analysis).filter(Analysis.is_active == True).all()
         
         result = []
         for analysis in analyses:
@@ -308,7 +313,9 @@ def get_analysis():
                 'abc_category': analysis.abc_category,
                 'xyz_category': analysis.xyz_category,
                 'abc_xyz_category': analysis.abc_xyz_category,
+                'recommended_cell': analysis.recommended_cell,
                 'revenue': float(analysis.revenue) if analysis.revenue else 0,
+                'turnover_rate': float(analysis.turnover_rate) if analysis.turnover_rate else 0,
                 'analysis_date': analysis.analysis_date.isoformat() if analysis.analysis_date else None
             })
         
@@ -321,106 +328,7 @@ def get_analysis():
     
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
-# ================================================================
-
-# =============== УПРОЩЕННЫЙ СПОСОБ ОБСЛУЖИВАНИЯ СТАТИЧЕСКИХ ФАЙЛОВ ===============
-@app.route('/static/<path:filename>')
-def serve_static(filename):
-    """Сервис для статических файлов"""
-    return send_from_directory(app.static_folder, filename)
-
-# Альтернативные маршруты для обратной совместимости
-@app.route('/styles.css')
-def serve_styles():
-    """Прямой доступ к CSS"""
-    try:
-        return send_file(os.path.join(app.static_folder, 'css', 'styles.css'), mimetype='text/css')
-    except FileNotFoundError:
-        return "CSS file not found", 404
-
-@app.route('/script.js')
-def serve_script():
-    """Прямой доступ к JS"""
-    try:
-        return send_file(os.path.join(app.static_folder, 'js', 'script.js'), mimetype='application/javascript')
-    except FileNotFoundError:
-        return "JavaScript file not found", 404
-
-# Маршрут для любых статических файлов (резервный)
-@app.route('/<path:filename>')
-def serve_any(filename):
-    """Сервис для любых файлов в статической папке"""
-    if filename.endswith('.css'):
-        return send_from_directory(app.static_folder, filename, mimetype='text/css')
-    elif filename.endswith('.js'):
-        return send_from_directory(app.static_folder, filename, mimetype='application/javascript')
-    else:
-        return "File not found", 404
-# ================================================================
+# ===============================================================
 
 if __name__ == '__main__':
-    print("🚀 Запуск сервера...")
-    print(f"📁 Текущая директория: {os.getcwd()}")
-    print(f"📁 Папка шаблонов: {app.template_folder}")
-    print(f"📁 Папка статики: {app.static_folder}")
-    
-    # Проверяем существование папок и файлов
-    print("\n🔍 Проверка файлов:")
-    
-    # Проверяем папку templates
-    if not os.path.exists('templates'):
-        print("⚠️  Папка templates не существует! Создаю...")
-        os.makedirs('templates')
-    else:
-        print("✅ Папка templates существует")
-    
-    # Проверяем index.html
-    if os.path.exists('templates/index.html'):
-        print("✅ Файл templates/index.html существует")
-    else:
-        print("❌ Файл templates/index.html не найден!")
-        print("   Убедитесь, что form4.html переименован в index.html и находится в папке templates/")
-    
-    # Проверяем папку static
-    if not os.path.exists('static'):
-        print("⚠️  Папка static не существует! Создаю...")
-        os.makedirs('static')
-        os.makedirs('static/css')
-        os.makedirs('static/js')
-    else:
-        print("✅ Папка static существует")
-        
-        if os.path.exists('static/css'):
-            print("✅ Папка static/css существует")
-        else:
-            print("⚠️  Папка static/css не существует! Создаю...")
-            os.makedirs('static/css')
-            
-        if os.path.exists('static/js'):
-            print("✅ Папка static/js существует")
-        else:
-            print("⚠️  Папка static/js не существует! Создаю...")
-            os.makedirs('static/js')
-    
-    # Проверяем CSS файл
-    css_path = os.path.join('static', 'css', 'styles.css')
-    if os.path.exists(css_path):
-        print(f"✅ CSS файл найден: {css_path}")
-    else:
-        print(f"❌ CSS файл не найден: {css_path}")
-        print("   Создаю простой CSS файл...")
-        with open(css_path, 'w', encoding='utf-8') as f:
-            f.write("/* Basic CSS */\nbody { font-family: Arial, sans-serif; }")
-    
-    # Проверяем JS файл
-    js_path = os.path.join('static', 'js', 'script.js')
-    if os.path.exists(js_path):
-        print(f"✅ JS файл найден: {js_path}")
-    else:
-        print(f"❌ JS файл не найден: {js_path}")
-        print("   Создаю простой JS файл...")
-        with open(js_path, 'w', encoding='utf-8') as f:
-            f.write("// Basic JavaScript\nconsole.log('Script loaded');")
-    
-    print("\n🌐 Сервер запущен: http://localhost:5000")
-    app.run(debug=True, port=5000, host='0.0.0.0')
+    app.run(debug=True, port=5000)
