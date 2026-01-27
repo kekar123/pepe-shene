@@ -258,7 +258,7 @@
             font-size: 20px;
         }
 
-        /* Кнопка открытия панели информации */
+        /* Кнопка открытия панели информации - УЛУЧШЕННАЯ АНИМАЦИЯ */
         .info-toggle-btn {
             position: fixed;
             left: 0;
@@ -274,22 +274,19 @@
             gap: 10px;
             cursor: pointer;
             z-index: 1002;
-            transition: all 0.3s ease;
-            transform: translateX(-100%);
+            transition: all 0.2s ease;
             opacity: 0.9;
         }
 
         .info-toggle-btn:hover {
             background-color: #141232;
-            transform: translateX(0);
             opacity: 1;
         }
 
-        .info-toggle-btn.visible {
-            transform: translateX(0);
-            background-color: #141232;
+        /* Скрываем кнопку */
+        .info-toggle-btn.hidden {
+            display: none !important;
         }
-
         .btn-icon {
             font-size: 20px;
         }
@@ -299,7 +296,7 @@
             font-size: 16px;
         }
 
-        /* Панель информации */
+        /* Панель информации - УЛУЧШЕННАЯ АНИМАЦИЯ */
         .info-panel {
             position: fixed;
             top: 0;
@@ -308,7 +305,7 @@
             height: 100vh;
             background-color: white;
             box-shadow: 5px 0 15px rgba(0,0,0,0.1);
-            transition: left 0.3s ease;
+            transition: left 0.2s ease;
             z-index: 1001;
             overflow-y: auto;
         }
@@ -325,11 +322,6 @@
             background-color: #141232;
             color: white;
             flex-direction: row-reverse;
-        }
-
-        .info-panel.active + .info-toggle-btn {
-            left: 400px;
-            transition: left 0.3s ease;
         }
 
         .info-header h2 {
@@ -617,41 +609,6 @@
 
         .send-btn:hover {
             background: #2980b9;
-        }
-
-        /* Когда обе панели открыты */
-        .info-panel.active ~ .main-content {
-            margin-left: 400px;
-            transition: margin-left 0.3s ease;
-        }
-
-        .info-panel.active ~ .info-toggle-btn {
-            left: 400px;
-            transition: left 0.3s ease;
-        }
-
-        /* Кнопка чата когда открыта панель информации */
-        .info-panel.active ~ .chat-bot-btn {
-            right: 20px;
-            bottom: 20px;
-        }
-
-        /* Окно чата когда открыта панель информации */
-        .info-panel.active ~ .chat-window.active {
-            right: 20px;
-            bottom: 90px;
-        }
-
-        /* Кнопка чата когда открыто окно чата (без панели информации) */
-        .chat-window.active ~ .chat-bot-btn {
-            right: 420px;
-            transition: right 0.3s ease;
-        }
-
-        /* Когда открыты обе панели одновременно */
-        .info-panel.active ~ .chat-window.active ~ .chat-bot-btn {
-            right: 420px;
-            transition: right 0.3s ease;
         }
 
         /* FOOTER */
@@ -1079,7 +1036,7 @@
 
             <div class="recommendation">
                 <h4 class="category-c">Категория C (удалённая зона):</h4>
-                <p>Размещение: в глубине складской зоны (далее 30 метров от зоны отгрузки).</p>
+                <p>Размещение: в глубине складской зона (далее 30 метров от зоны отгрузки).</p>
                 <p>Стратегия: минимизация складских запасов.</p>
                 <p>Запасы: минимальный страховой запас (7-10 дней) или работа под заказ.</p>
                 <p>Частота инвентаризации: ежемесячная.</p>
@@ -1167,10 +1124,6 @@
         
         // Настройка обработчика файлового ввода
         setupFileInput();
-        
-        // Делаем кнопку информации видимой сразу
-        const toggleBtn = document.querySelector('.info-toggle-btn');
-        toggleBtn.classList.add('visible');
     });
     
     // Настройка drag and drop
@@ -1495,17 +1448,12 @@
 
     // Функции для панели информации
     function toggleInfoPanel() {
-        const infoPanel = document.getElementById('infoPanel');
-        const toggleBtn = document.querySelector('.info-toggle-btn');
-        
-        infoPanel.classList.toggle('active');
-        
-        if (infoPanel.classList.contains('active')) {
-            toggleBtn.innerHTML = '<span class="btn-icon">✕</span><span class="btn-text">Закрыть</span>';
-        } else {
-            toggleBtn.innerHTML = '<span class="btn-icon"></span><span class="btn-text">Показать информацию</span>';
-        }
-    }
+    const infoPanel = document.getElementById('infoPanel');
+    const toggleBtn = document.querySelector('.info-toggle-btn');
+    
+    infoPanel.classList.toggle('active');
+    toggleBtn.classList.toggle('hidden');
+}
     
     // ОТДЕЛЬНЫЙ ОБРАБОТЧИК ДЛЯ ПАНЕЛИ ИНФОРМАЦИИ
     document.addEventListener('click', function(event) {
@@ -1513,18 +1461,24 @@
         const infoToggleBtn = document.querySelector('.info-toggle-btn');
         const chatWindow = document.getElementById('chatWindow');
         const chatBtn = document.querySelector('.chat-bot-btn');
+        const closeBtn = document.querySelector('.close-btn');
         
-        // Закрываем панель информации только если:
+        // Закрываем панель информации если:
+        // 1. Она открыта
+        // 2. И клик по крестику
+        // ИЛИ
         // 1. Она открыта
         // 2. Клик не по панели информации
-        // 3. Клик не по кнопке информации
+        // 3. Клик не по кнопке информации (даже если она сдвинута)
         // 4. Игнорируем клики по чат-боту и его окну
-        if (infoPanel.classList.contains('active') && 
-            !infoPanel.contains(event.target) && 
-            !infoToggleBtn.contains(event.target) &&
-            !chatWindow.contains(event.target) &&
-            !chatBtn.contains(event.target)) {
-            toggleInfoPanel();
+        if (infoPanel.classList.contains('active')) {
+            if (event.target === closeBtn || 
+                (!infoPanel.contains(event.target) && 
+                 !infoToggleBtn.contains(event.target) &&
+                 !chatWindow.contains(event.target) &&
+                 !chatBtn.contains(event.target))) {
+                toggleInfoPanel();
+            }
         }
     });
 
