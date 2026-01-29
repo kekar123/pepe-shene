@@ -37,7 +37,6 @@
             
             <div class="tabs">
                 <div class="tab active" data-tab="upload">ABC/XYZ Анализ</div>
-                <div class="tab" data-tab="download">Отгрузка</div>
             </div>
             
             <div class="tab-content active" id="upload">
@@ -59,10 +58,6 @@
                     <div id="statsDetails"></div>
                 </div>
             </div>
-            
-            <div class="tab-content" id="download">
-                <p style="text-align: center; padding: 20px;">Функция отгрузки пока недоступна. Пожалуйста, используйте вкладку "Анализ".</p>
-            </div>
         </div>
     </div>
 </main>
@@ -75,9 +70,6 @@
         <div class="table-container">
             <div class="table-tabs">
                 <div class="table-tab active">Общее</div>
-                <div class="table-tab">ABC анализ</div>
-                <div class="table-tab">XYZ анализ</div>
-                <div class="table-tab">Матрица</div>
             </div>
 
             <div class="table-wrapper">
@@ -105,24 +97,97 @@
     </main>
 </section>
 
-<!-- Visualization -->
-<main class="page-container">
-    <section class="visual-section">
-        <h2>Визуализация результатов</h2>
-
-        <div class="charts">
-            <div class="chart-box">
-                <h3>Доля категорий ABC</h3>
-                <div class="chart-placeholder" id="abcChart"></div>
-            </div>
-
-            <div class="chart-box">
-                <h3>Распределение товаров по категориям XYZ</h3>
-                <div class="chart-placeholder" id="xyzChart"></div>
-            </div>
+<!-- ВИЗУАЛИЗАЦИЯ ГРАФИКОВ -->
+<section class="charts-section">
+    <main class="result-container">
+        <h2>📊 Визуализация результатов анализа</h2>
+        
+        <!-- Индикатор загрузки графиков -->
+        <div id="chartsLoading" style="display: none; text-align: center; padding: 40px;">
+            <div class="loading-spinner" style="font-size: 48px; margin-bottom: 20px;">⏳</div>
+            <h3>Генерация графиков...</h3>
+            <p>Пожалуйста, подождите</p>
         </div>
-    </section>
-</main>
+        
+        <!-- Контейнер для графиков -->
+        <div id="chartsContainer" style="display: none;">
+            
+            <!-- Первая строка: ABC и XYZ -->
+            <div class="charts-row">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3>ABC Анализ</h3>
+                        <div class="chart-description">
+                            Распределение выручки по ABC категориям. A - наиболее прибыльные (80% выручки), B - средние (15%), C - наименее прибыльные (5%).
+                        </div>
+                    </div>
+                    <div class="chart-content">
+                        <img id="abcChart" src="" alt="ABC анализ" class="chart-image">
+                    </div>
+                </div>
+                
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3>XYZ Анализ</h3>
+                        <div class="chart-description">
+                            Стабильность спроса по XYZ категориям. X - стабильный спрос, Y - сезонные колебания, Z - нерегулярный спрос.
+                        </div>
+                    </div>
+                    <div class="chart-content">
+                        <img id="xyzChart" src="" alt="XYZ анализ" class="chart-image">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Вторая строка: Матрица и Топ товаров -->
+            <div class="charts-row">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3>Матрица ABC-XYZ</h3>
+                        <div class="chart-description">
+                            Тепловая карта комбинаций ABC-XYZ. Позволяет определить стратегию управления для каждой группы товаров.
+                        </div>
+                    </div>
+                    <div class="chart-content">
+                        <img id="matrixChart" src="" alt="Матрица ABC-XYZ" class="chart-image">
+                    </div>
+                </div>
+                
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3>Топ товаров по выручке</h3>
+                        <div class="chart-description">
+                            Самые прибыльные товары. Цветом обозначена категория ABC (зеленый - A, оранжевый - B, красный - C).
+                        </div>
+                    </div>
+                    <div class="chart-content">
+                        <img id="topProductsChart" src="" alt="Топ товаров" class="chart-image">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Статистика графиков -->
+            <div class="charts-stats" id="chartsStats">
+                <h4>Статистика анализа</h4>
+                <div class="stats-grid" id="chartsStatsGrid">
+                    <!-- Статистика будет загружена динамически -->
+                </div>
+            </div>
+            
+        </div>
+        
+        <!-- Сообщение если нет графиков -->
+        <div id="noChartsMessage" style="text-align: center; padding: 60px 20px; color: #7f8c8d; background: #f8f9fa; border-radius: 12px; margin: 20px 0;">
+            <div style="font-size: 64px; margin-bottom: 20px;">📈</div>
+            <h3>Графики не загружены</h3>
+            <p>Загрузите Excel файл для автоматической генерации графиков анализа</p>
+            <button class="upload-button" onclick="document.getElementById('fileInput').click()" style="margin-top: 20px;">
+                Загрузить файл
+            </button>
+        </div>
+        
+    </main>
+</section>
 
 <!-- Кнопка открытия панели информации -->
 <button class="info-toggle-btn" onclick="toggleInfoPanel()">
@@ -226,7 +291,20 @@
     </div>
 </div>
 
-<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+<!-- Модальное окно для полноэкранного просмотра графиков -->
+<div id="chartModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitle">График</h3>
+            <button class="close-modal" onclick="closeModal()">×</button>
+        </div>
+        <div class="modal-body">
+            <img id="modalImage" src="" alt="Полноэкранный график" class="modal-image">
+            <div class="modal-description" id="modalDescription"></div>
+        </div>
+    </div>
+</div>
 
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
 </html>

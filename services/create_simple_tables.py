@@ -1,5 +1,4 @@
 import sqlite3
-
 # Удаляем старый файл если есть
 import os
 if os.path.exists('pepe_database.db'):
