@@ -1,13 +1,12 @@
 // Основные функции для работы с файлами
 const API_BASE_URL = 'http://localhost:5000';
 
-// DOM элементы
 const dropArea = document.getElementById('dropArea');
 const fileInput = document.getElementById('fileInput');
 const notification = document.getElementById('notification');
 const notificationText = document.getElementById('notification-text');
 const progressFill = document.getElementById('progress-fill');
-const tableBody = document.getElementById('tableBody');
+const tableBody = document.getElementById('tableBody'); // <-- ДОБАВЬТЕ ЭТУ СТРОЧКУ
 const dynamicAnalysisInfo = document.getElementById('dynamicAnalysisInfo');
 const analysisStats = document.getElementById('analysisStats');
 const statsDetails = document.getElementById('statsDetails');
@@ -132,12 +131,10 @@ async function uploadFile(formData) {
         if (response.ok && result.success) {
             updateProgress(100);
             
-            currentAnalysisData = result;
-            
             // Отображаем статистику
             displayAnalysisStats(result);
             
-            // Автоматически загружаем и отображаем графики
+            // Автоматически загружаем графики
             if (result.charts_info && result.charts_info.generated && result.charts_info.charts) {
                 displayCharts(result.charts_info.charts);
                 showNotification(`Файл успешно обработан! Сгенерировано ${result.charts_info.count} графиков`, 'success');
@@ -146,11 +143,8 @@ async function uploadFile(formData) {
                 await autoLoadCharts();
             }
             
-            // Загружаем данные таблицы
+            // ЗАГРУЖАЕМ ДАННЫЕ ТАБЛИЦЫ <-- ДОБАВЬТЕ ЭТУ ЧАСТЬ
             await loadAnalysisDataFromAPI();
-            
-            // Начинаем автоматическое обновление
-            startAutoRefresh();
             
         } else {
             showNotification(result.error || 'Ошибка при обработке файла', 'error');
@@ -161,6 +155,136 @@ async function uploadFile(formData) {
         showNotification('Ошибка соединения с сервером', 'error');
         updateProgress(0);
     }
+}
+
+async function loadAnalysisDataFromAPI() {
+    try {
+        showNotification('Загрузка данных анализа из базы данных...', 'info');
+        
+        const response = await fetch(`${API_BASE_URL}/api/analysis-data`);
+        const result = await response.json();
+        
+        if (result.success) {
+            displayAnalysisTable(result.data);
+            updateAnalysisInfo(result.data);
+            
+            showNotification('Данные анализа успешно загружены!', 'success');
+        } else {
+            // Пробуем загрузить из файла как резервный вариант
+            await loadAnalysisDataFromFile();
+        }
+    } catch (error) {
+        console.error('Ошибка загрузки анализа из API:', error);
+        // Пробуем загрузить из файла как резервный вариант
+        await loadAnalysisDataFromFile();
+    }
+}
+
+async function loadAnalysisDataFromFile() {
+    try {
+        showNotification('Загрузка данных анализа из файла...', 'info');
+        
+        // Получаем последний файл анализа
+        const response = await fetch(`${API_BASE_URL}/api/get-latest-analysis`);
+        const result = await response.json();
+        
+        if (result.success) {
+            displayAnalysisTable(result.data);
+            updateAnalysisInfo(result.data);
+            
+            showNotification('Данные анализа успешно загружены из файла!', 'success');
+        } else {
+            showNotification('Нет данных для отображения', 'warning');
+        }
+    } catch (error) {
+        console.error('Ошибка загрузки анализа из файла:', error);
+        showNotification('Ошибка загрузки данных анализа', 'error');
+    }
+}
+
+function displayAnalysisTable(data) {
+    if (!tableBody) return;
+    
+    tableBody.innerHTML = '';
+    
+    if (!data || data.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 40px;">
+                    Нет данных для отображения
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    data.forEach((item, index) => {
+        const row = document.createElement('tr');
+        
+        // Добавляем анимацию с задержкой для каждой строки
+        row.style.animationDelay = `${index * 0.05}s`;
+        row.style.opacity = '0';
+        row.style.animation = 'fadeIn 0.5s ease forwards';
+        
+        // Определяем класс категории для цвета
+        const abcClass = item.ABC ? `category-${item.ABC.toLowerCase()}` : '';
+        
+        row.innerHTML = `
+            <td>${item.id || index + 1}</td>
+            <td>${item.name || item.product_name || ''}</td>
+            <td>${item.revenue ? item.revenue.toLocaleString() : 0}</td>
+            <td><span class="${abcClass}">${item.ABC || ''}</span></td>
+            <td>${item.XYZ || ''}</td>
+            <td>${item.ABC_XYZ || ''}</td>
+        `;
+        tableBody.appendChild(row);
+    });
+}
+
+function updateAnalysisInfo(data) {
+    if (!dynamicAnalysisInfo) return;
+    
+    const abcCounts = { A: 0, B: 0, C: 0 };
+    const xyzCounts = { X: 0, Y: 0, Z: 0 };
+    
+    data.forEach(item => {
+        if (item.ABC && abcCounts.hasOwnProperty(item.ABC)) {
+            abcCounts[item.ABC]++;
+        }
+        if (item.XYZ && xyzCounts.hasOwnProperty(item.XYZ)) {
+            xyzCounts[item.XYZ]++;
+        }
+    });
+    
+    const sortedByRevenue = [...data].sort((a, b) => (b.revenue || 0) - (a.revenue || 0));
+    const topProducts = sortedByRevenue.slice(0, 3).map(item => item.name || item.product_name || 'Без названия');
+    const bottomProducts = sortedByRevenue.slice(-3).map(item => item.name || item.product_name || 'Без названия');
+    
+    dynamicAnalysisInfo.innerHTML = `
+        <h4>По категориям ABC:</h4>
+        <ul>
+            <li>A (высокооборотные): ${abcCounts.A} позиций (${data.length > 0 ? ((abcCounts.A / data.length) * 100).toFixed(1) : 0}%)</li>
+            <li>B (среднеоборотные): ${abcCounts.B} позиций (${data.length > 0 ? ((abcCounts.B / data.length) * 100).toFixed(1) : 0}%)</li>
+            <li>C (низкооборотные): ${abcCounts.C} позиций (${data.length > 0 ? ((abcCounts.C / data.length) * 100).toFixed(1) : 0}%)</li>
+        </ul>
+        
+        <h4>По категориям XYZ:</h4>
+        <ul>
+            <li>X (стабильные): ${xyzCounts.X} позиций (${data.length > 0 ? ((xyzCounts.X / data.length) * 100).toFixed(1) : 0}%)</li>
+            <li>Y (сезонные): ${xyzCounts.Y} позиций (${data.length > 0 ? ((xyzCounts.Y / data.length) * 100).toFixed(1) : 0}%)</li>
+            <li>Z (нерегулярные): ${xyzCounts.Z} позиций (${data.length > 0 ? ((xyzCounts.Z / data.length) * 100).toFixed(1) : 0}%)</li>
+        </ul>
+        
+        <h4>Самые высокоходные товары:</h4>
+        <div class="product-list">
+            ${topProducts.map(product => `<div class="product-item">${product}</div>`).join('')}
+        </div>
+        
+        <h4>Самые низкоходовые товары:</h4>
+        <div class="product-list">
+            ${bottomProducts.map(product => `<div class="product-item">${product}</div>`).join('')}
+        </div>
+    `;
 }
 
 function displayAnalysisStats(data) {
@@ -734,9 +858,6 @@ async function checkExistingData() {
             // Загружаем таблицу
             await loadAnalysisDataFromAPI();
             
-            // Запускаем автообновление
-            startAutoRefresh();
-            
             showNotification(`Загружено ${data.count} записей из базы данных`, 'success');
         } else {
             console.log('В базе данных нет записей');
@@ -799,7 +920,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Проверяем существующие данные при загрузке страницы
+    // ПРОВЕРЯЕМ СУЩЕСТВУЮЩИЕ ДАННЫЕ ПРИ ЗАГРУЗКЕ СТРАНИЦЫ <-- ДОБАВЬТЕ ЭТО
     setTimeout(() => {
         checkExistingData();
     }, 1000);
@@ -1458,3 +1579,5 @@ window.toggleZoom = toggleZoom;
 window.zoomIn = zoomIn;
 window.zoomOut = zoomOut;
 window.resetZoom = resetZoom;
+window.checkExistingData = checkExistingData;
+window.loadAnalysisDataFromAPI = loadAnalysisDataFromAPI;

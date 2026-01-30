@@ -1784,3 +1784,35 @@ button:active,
     80% { opacity: 1; transform: translateX(-50%) translateY(0); }
     100% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
 }
+
+/* =============== СТИЛИ ДЛЯ ЦВЕТОВ КАТЕГОРИЙ В ТАБЛИЦЕ =============== */
+.category-a {
+    color: #2ecc71;
+    font-weight: bold;
+}
+
+.category-b {
+    color: #f39c12;
+    font-weight: bold;
+}
+
+.category-c {
+    color: #e74c3c;
+    font-weight: bold;
+}
+
+/* =============== АНИМАЦИЯ ПОЯВЛЕНИЯ ТАБЛИЦЫ =============== */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+#analysisTable tbody tr {
+    animation: fadeIn 0.5s ease forwards;
+}
