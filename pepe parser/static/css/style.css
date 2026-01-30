@@ -14,7 +14,7 @@ body {
 /* HEADER */
 .header {
     width: 100%;
-    background: linear-gradient(90deg, #0f1235, #1e2a5a);
+    background-color: #0f1235;
 }
 
 .header-inner {
@@ -115,14 +115,7 @@ body {
     text-align: center;
     margin: 20px 0;
     cursor: pointer;
-    transition: all 0.3s ease;
     background-color: white;
-}
-
-.upload-area:hover {
-    border-color: #3498db;
-    background-color: #f8fafc;
-    transform: translateY(-2px);
 }
 
 .upload-area.dragover {
@@ -162,9 +155,7 @@ body {
 }
 
 .upload-button:hover {
-    background-color: #0f1235;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(15, 18, 53, 0.3);
+    background-color: #2a2d53;
 }
 
 .upload-note {
@@ -179,20 +170,6 @@ body {
     color: #2c3e50;
 }
 
-/* Analysis Stats */
-.analysis-stats {
-    background-color: #f8f9fa;
-    padding: 20px;
-    border-radius: 10px;
-    margin: 20px 0;
-    border-left: 4px solid #1e2a5a;
-}
-
-.analysis-stats h4 {
-    color: #2c3e50;
-    margin-bottom: 15px;
-    font-size: 18px;
-}
 
 .stats-grid {
     display: grid;
@@ -317,11 +294,6 @@ td {
 td:last-child {
     border-right: none;
 }
-
-tr:hover td {
-    background-color: #f0f7ff;
-}
-
 tr:last-child td {
     border-bottom: none;
 }
@@ -344,22 +316,12 @@ tr:last-child td {
 
 /* =============== СЕКЦИЯ ГРАФИКОВ =============== */
 .charts-section {
-    background: white;
     padding: 50px 20px;
     margin: 40px 0;
     border-radius: 0;
     position: relative;
 }
 
-.charts-section::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-}
 
 .charts-section h2 {
     color: #2c3e50;
@@ -371,17 +333,6 @@ tr:last-child td {
     display: inline-block;
     left: 50%;
     transform: translateX(-50%);
-}
-
-.charts-section h2::after {
-    content: '';
-    position: absolute;
-    bottom: -10px;
-    left: 0;
-    width: 100%;
-    height: 4px;
-    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-    border-radius: 2px;
 }
 
 /* Строка графиков */
@@ -414,27 +365,12 @@ tr:last-child td {
     overflow: hidden;
 }
 
-.chart-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, #3498db 0%, #2ecc71 100%);
-}
-
 .chart-card:hover {
-    transform: translateY(-5px);
     box-shadow: 0 12px 40px rgba(0,0,0,0.12);
 }
 
 .chart-card.full-width {
     grid-column: 1 / -1;
-}
-
-.chart-card.full-width::before {
-    background: linear-gradient(90deg, #9b59b6 0%, #e74c3c 100%);
 }
 
 /* Заголовок карточки */
@@ -652,7 +588,7 @@ tr:last-child td {
     position: fixed;
     left: 0;
     top: 100px;
-    background: linear-gradient(135deg, #141232 0%, #1e2a5a 100%);
+    background-color: #0f1235;
     color: white;
     border: 1px solid rgba(255,255,255,0.2);
     border-left: none;
@@ -663,15 +599,11 @@ tr:last-child td {
     gap: 10px;
     cursor: pointer;
     z-index: 1002;
-    transition: all 0.3s ease;
-    opacity: 0.9;
     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
 }
 
 .info-toggle-btn:hover {
-    opacity: 1;
-    transform: translateX(5px);
-    padding-left: 25px;
+    background-color: #242853;
 }
 
 .info-toggle-btn.hidden {
@@ -712,7 +644,7 @@ tr:last-child td {
     justify-content: space-between;
     align-items: center;
     padding: 25px;
-    background: linear-gradient(135deg, #141232 0%, #1e2a5a 100%);
+    background-color: #0f1235;
     color: white;
     flex-direction: row-reverse;
     position: sticky;
@@ -745,7 +677,6 @@ tr:last-child td {
 
 .close-btn:hover {
     background: rgba(255, 255, 255, 0.2);
-    transform: rotate(90deg);
 }
 
 .info-content {
@@ -860,7 +791,7 @@ tr:last-child td {
     width: 70px;
     height: 70px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #121C32 0%, #1e2a5a 100%);
+    background-color: #0f1235;
     border: none;
     color: white;
     font-size: 32px;
@@ -871,11 +802,13 @@ tr:last-child td {
     align-items: center;
     justify-content: center;
     transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.329);
 }
 
 .chat-bot-btn:hover {
     transform: scale(1.1) rotate(10deg);
     box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+    background-color: #191d44;
 }
 
 .bot-avatar {
@@ -907,7 +840,7 @@ tr:last-child td {
 }
 
 .chat-header {
-    background: linear-gradient(135deg, #0f1235 0%, #1e2a5a 100%);
+    background-color: #0f1235;
     color: white;
     padding: 25px;
     display: flex;
@@ -957,7 +890,6 @@ tr:last-child td {
 
 .chat-close-btn:hover {
     background: rgba(255,255,255,0.2);
-    transform: rotate(90deg);
 }
 
 /* =============== ТЕЛО ЧАТА =============== */
@@ -1067,7 +999,7 @@ tr:last-child td {
 
 .send-btn {
     padding: 14px 28px;
-    background: linear-gradient(135deg, #314674 0%, #1e2a5a 100%);
+    background-color: #0f1235;
     color: white;
     border: none;
     border-radius: 25px;
@@ -1078,8 +1010,7 @@ tr:last-child td {
 }
 
 .send-btn:hover {
-    background: linear-gradient(135deg, #2980b9 0%, #1e2a5a 100%);
-    transform: translateY(-2px);
+    background-color: #1d2044;
 }
 
 /* =============== УВЕДОМЛЕНИЯ =============== */
@@ -1214,11 +1145,10 @@ tr:last-child td {
 /* =============== FOOTER =============== */
 .footer {
     width: 100%;
-    background: linear-gradient(135deg, #0f1235 0%, #1e2a5a 100%);
+    background-color: #0f1235;
     color: #fff;
     margin-top: 80px;
     padding: 30px 0;
-    border-top: 4px solid #667eea;
 }
 
 .footer-inner {
@@ -1386,12 +1316,12 @@ button:active,
 }
 
 ::-webkit-scrollbar-thumb {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background-color: #2b2e57;
     border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(135deg, #5d6fd8 0%, #6a4a8a 100%);
+    background-color: #333869;
 }
 
 .table-wrapper::-webkit-scrollbar-track {
@@ -1432,18 +1362,6 @@ button:active,
 .charts-section h2 {
     position: relative;
     display: inline-block;
-}
-
-.results-section h2::after {
-    content: '';
-    position: absolute;
-    bottom: -10px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100px;
-    height: 4px;
-    background: linear-gradient(90deg, #ff9a9e 0%, #fad0c4 100%);
-    border-radius: 2px;
 }
 
 /* =============== ИНДИКАТОР АВТООБНОВЛЕНИЯ =============== */
@@ -1499,7 +1417,6 @@ button:active,
 
 .stop-refresh-btn:hover {
     background: #c0392b;
-    transform: translateY(-2px);
 }
 
 /* =============== ИНДИКАТОР ОБНОВЛЕНИЯ =============== */
@@ -1539,23 +1456,6 @@ button:active,
 .update-indicator span {
     color: #2c3e50;
     font-weight: 500;
-}
-
-/* =============== ДОПОЛНИТЕЛЬНЫЕ СТИЛИ ДЛЯ ГРАФИКОВ =============== */
-.chart-card:nth-child(1)::before {
-    background: linear-gradient(90deg, #3498db 0%, #2ecc71 100%);
-}
-
-.chart-card:nth-child(2)::before {
-    background: linear-gradient(90deg, #9b59b6 0%, #e74c3c 100%);
-}
-
-.chart-card:nth-child(3)::before {
-    background: linear-gradient(90deg, #f39c12 0%, #d35400 100%);
-}
-
-.chart-card:nth-child(4)::before {
-    background: linear-gradient(90deg, #1abc9c 0%, #16a085 100%);
 }
 
 .chart-content.placeholder {
@@ -1622,8 +1522,8 @@ button:active,
 /* =============== ТЕМНАЯ ТЕМА ДЛЯ ГРАФИКОВ (опционально) =============== */
 @media (prefers-color-scheme: dark) {
     .chart-card {
-        background: #2c3e50;
-        border-color: #34495e;
+        background: #0f1235;
+        border-color: #22264e;
     }
     
     .chart-header h3 {
@@ -1635,7 +1535,7 @@ button:active,
     }
     
     .chart-content {
-        background: #34495e;
+        background: #454769;
     }
 }
 
@@ -1690,7 +1590,7 @@ button:active,
     justify-content: space-between;
     align-items: center;
     padding: 20px 30px;
-    background: linear-gradient(135deg, #0f1235 0%, #1e2a5a 100%);
+    background-color: #0f1235;
     color: white;
     border-radius: 16px 16px 0 0;
 }
@@ -1719,7 +1619,6 @@ button:active,
 
 .close-modal:hover {
     background: rgba(255, 255, 255, 0.2);
-    transform: rotate(90deg);
 }
 
 .modal-body {
@@ -1747,19 +1646,6 @@ button:active,
     transform: scale(1.5);
     z-index: 1006;
     position: relative;
-}
-
-.modal-description {
-    margin-top: 25px;
-    padding: 20px;
-    background: white;
-    border-radius: 12px;
-    font-size: 16px;
-    color: #555;
-    line-height: 1.6;
-    border-left: 4px solid #667eea;
-    max-height: 200px;
-    overflow-y: auto;
 }
 
 /* Улучшение для изображений графиков */

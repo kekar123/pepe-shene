@@ -292,7 +292,7 @@ function displayIndividualCharts(charts) {
         abcChartImg.src = `data:image/png;base64,${charts['abc_pie']}`;
         abcChartImg.alt = 'ABC анализ';
         abcChartImg.style.opacity = '0';
-        abcChartImg.onclick = () => openFullscreenChart('abcChart', 'ABC Анализ', 'Распределение выручки по ABC категориям. A - наиболее прибыльные товары (80% выручки), B - средние (15%), C - наименее прибыльные (5%).');
+        abcChartImg.onclick = () => openFullscreenChart('abcChart', 'ABC Анализ');
         setTimeout(() => {
             abcChartImg.style.opacity = '1';
             abcChartImg.style.transition = 'opacity 0.5s ease';
@@ -305,7 +305,7 @@ function displayIndividualCharts(charts) {
         xyzChartImg.src = `data:image/png;base64,${charts['xyz_bar']}`;
         xyzChartImg.alt = 'XYZ анализ';
         xyzChartImg.style.opacity = '0';
-        xyzChartImg.onclick = () => openFullscreenChart('xyzChart', 'XYZ Анализ', 'Стабильность спроса по XYZ категориям. X - стабильный спрос, Y - сезонные колебания, Z - нерегулярный спрос.');
+        xyzChartImg.onclick = () => openFullscreenChart('xyzChart', 'XYZ Анализ');
         setTimeout(() => {
             xyzChartImg.style.opacity = '1';
             xyzChartImg.style.transition = 'opacity 0.5s ease';
@@ -318,7 +318,7 @@ function displayIndividualCharts(charts) {
         matrixChartImg.src = `data:image/png;base64,${charts['abc_xyz_matrix']}`;
         matrixChartImg.alt = 'Матрица ABC-XYZ';
         matrixChartImg.style.opacity = '0';
-        matrixChartImg.onclick = () => openFullscreenChart('matrixChart', 'Матрица ABC-XYZ', 'Тепловая карта показывает комбинации ABC-XYZ. Позволяет определить стратегию управления для каждой группы товаров.');
+        matrixChartImg.onclick = () => openFullscreenChart('matrixChart', 'Матрица ABC-XYZ');
         setTimeout(() => {
             matrixChartImg.style.opacity = '1';
             matrixChartImg.style.transition = 'opacity 0.5s ease';
@@ -331,7 +331,7 @@ function displayIndividualCharts(charts) {
         topProductsChartImg.src = `data:image/png;base64,${charts['top_products']}`;
         topProductsChartImg.alt = 'Топ товаров по выручке';
         topProductsChartImg.style.opacity = '0';
-        topProductsChartImg.onclick = () => openFullscreenChart('topProductsChart', 'Топ товаров по выручке', 'Самые прибыльные товары. Цветом обозначена категория ABC (зеленый - A, оранжевый - B, красный - C).');
+        topProductsChartImg.onclick = () => openFullscreenChart('topProductsChart');
         setTimeout(() => {
             topProductsChartImg.style.opacity = '1';
             topProductsChartImg.style.transition = 'opacity 0.5s ease';
