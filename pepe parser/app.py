@@ -9,22 +9,17 @@ from excel_parser import xls_to_json_single
 from analyzer import perform_abc_xyz_analysis
 import pandas as pd
 from sqlalchemy import func
-from db.models import Analysis 
 
 # =============== ДОПОЛНЕНИЯ ДЛЯ БАЗЫ ДАННЫХ ===============
 import sys
-import os
 
 # Добавляем путь к корню проекта для импорта модулей
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.insert(0, parent_dir)
-current_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, current_dir)  # Добавляем текущую директорию
 
 try:
     from db.database import db
-    
     from services.data_loader import JSONToDBLoader
     DB_AVAILABLE = True
 except ImportError as e:
@@ -961,50 +956,6 @@ def internal_error(error):
 def too_large(error):
     return jsonify({'error': 'Файл слишком большой (макс. 10 МБ)'}), 413
 # ===============================================
-
-@app.route('/api/analysis-data')
-def get_analysis_data():
-    """API для получения данных анализа из БД в формате для таблицы"""
-    if not DB_AVAILABLE:
-        return jsonify({'success': False, 'error': 'База данных не доступна'}), 500
-    
-    try:
-        session = db.get_session()
-        
-        # Получаем все записи анализа
-        analyses = session.query(
-            Analysis.id,
-            Analysis.product_name,
-            Analysis.revenue,
-            Analysis.abc_category,
-            Analysis.xyz_category,
-            Analysis.abc_xyz_category,
-            Analysis.analysis_date
-        ).order_by(Analysis.revenue.desc()).all()
-        
-        session.close()
-        
-        result = []
-        for analysis in analyses:
-            result.append({
-                'id': analysis.id,
-                'name': analysis.product_name,
-                'revenue': float(analysis.revenue) if analysis.revenue else 0,
-                'ABC': analysis.abc_category or '',
-                'XYZ': analysis.xyz_category or '',
-                'ABC_XYZ': analysis.abc_xyz_category or '',
-                'analysis_date': analysis.analysis_date.isoformat() if analysis.analysis_date else None
-            })
-        
-        return jsonify({
-            'success': True,
-            'count': len(result),
-            'data': result
-        })
-        
-    except Exception as e:
-        print(f"❌ Ошибка получения данных анализа: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
     # Вывод информации о системе при запуске

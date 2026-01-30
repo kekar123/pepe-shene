@@ -1,21 +1,10 @@
-# services/data_loader.py
 import json
 import os
 from datetime import datetime
 from typing import Dict, List
 from sqlalchemy.exc import IntegrityError
-
-# Используем относительные импорты
-try:
-    from ..db.database import db
-    from ..db.models import Store, Analysis
-except ImportError:
-    # Для прямого запуска из папки services
-    import sys
-    import os
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from db.database import db
-    from db.models import Store, Analysis
+from db.database import db
+from db.models import Store, Analysis
 
 class JSONToDBLoader:
     def __init__(self):
