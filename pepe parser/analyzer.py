@@ -7,6 +7,8 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 import statistics
 
+BASE_DIR = Path(__file__).resolve().parent
+
 def perform_abc_analysis(json_file_path, output_file_name="abc_result.json", quantity_column="ШТУК_ЗАКАЗАНО"):
     """
     Выполняет ABC анализ на основе JSON файла с данными
@@ -241,9 +243,8 @@ def perform_abc_analysis(json_file_path, output_file_name="abc_result.json", qua
         }
         
         # Определяем путь для сохранения результатов
-        json_path = Path(json_file_path)
-        results_path = json_path.parent / "analysis_results"
-        results_path.mkdir(exist_ok=True)
+        results_path = BASE_DIR / "analysis_results"
+        results_path.mkdir(exist_ok=True, parents=True)
         
         output_path = results_path / output_file_name
         
@@ -445,9 +446,8 @@ def _xyz_simple(data, output_file_name):
         }
         
         # Сохраняем в файл
-        json_path = Path(output_file_name)
-        results_path = json_path.parent / "analysis_results"
-        results_path.mkdir(exist_ok=True)
+        results_path = BASE_DIR / "analysis_results"
+        results_path.mkdir(exist_ok=True, parents=True)
         
         output_path = results_path / output_file_name
         
@@ -566,9 +566,8 @@ def _xyz_from_periods(data, period_keys, output_file_name):
         }
         
         # Сохраняем в файл
-        json_path = Path(output_file_name)
-        results_path = json_path.parent / "analysis_results"
-        results_path.mkdir(exist_ok=True)
+        results_path = BASE_DIR / "analysis_results"
+        results_path.mkdir(exist_ok=True, parents=True)
         
         output_path = results_path / output_file_name
         
@@ -712,9 +711,8 @@ def perform_abc_xyz_analysis(json_file_path, output_file_name="abc_xyz_result.js
             result['matrix'][key].append(item)
         
         # Сохраняем в файл
-        json_path = Path(json_file_path)
-        results_path = json_path.parent / "analysis_results"
-        results_path.mkdir(exist_ok=True)
+        results_path = BASE_DIR / "analysis_results"
+        results_path.mkdir(exist_ok=True, parents=True)
         
         output_path = results_path / output_file_name
         
@@ -888,9 +886,9 @@ def create_summary_report(processed_files, output_file="analysis_summary.csv"):
         
         # Определяем путь для сохранения
         if processed_files:
-            output_path = Path(processed_files[0]['input']).parent / "analysis_results" / output_file
+            output_path = BASE_DIR / "analysis_results" / output_file
         else:
-            output_path = Path.cwd() / "analysis_results" / output_file
+            output_path = BASE_DIR / "analysis_results" / output_file
         
         output_path.parent.mkdir(exist_ok=True, parents=True)
         

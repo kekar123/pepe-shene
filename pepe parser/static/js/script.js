@@ -1458,3 +1458,402 @@ window.toggleZoom = toggleZoom;
 window.zoomIn = zoomIn;
 window.zoomOut = zoomOut;
 window.resetZoom = resetZoom;
+
+// script.js - добавьте новые функции
+
+async function loadVisualizationData(sessionId = null) {
+    try {
+        showNotification('Загрузка данных для визуализации...', 'info');
+        
+        let url = `${API_BASE_URL}/api/visualization/data`;
+        if (sessionId) {
+            url += `?session_id=${sessionId}`;
+        }
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (data.success) {
+            // Отображаем данные в таблице
+            displayProductsTable(data.products.data);
+            
+            // Отображаем статистику
+            displayCategoryStats(data.category_stats);
+            
+            // Отображаем матрицу
+            displayMatrixData(data.matrix_data);
+            
+            // Отображаем графики если они есть
+            if (data.has_charts && data.charts) {
+                displayCharts(data.charts);
+            } else {
+                // Если графиков нет, генерируем их
+                await generateAndDisplayCharts(data);
+            }
+            
+            // Сохраняем ID сессии
+            currentSessionId = data.session_info?.id;
+            
+            showNotification('Данные визуализации загружены', 'success');
+            return true;
+        } else {
+            showNotification('Ошибка загрузки данных: ' + (data.error || 'Неизвестная ошибка'), 'error');
+            return false;
+        }
+        
+    } catch (error) {
+        console.error('Ошибка загрузки данных визуализации:', error);
+        showNotification('Ошибка загрузки данных визуализации', 'error');
+        return false;
+    }
+}
+
+function displayProductsTable(products) {
+    if (!tableBody) return;
+    
+    tableBody.innerHTML = '';
+    
+    products.forEach((product, index) => {
+        const row = document.createElement('tr');
+        
+        const abcClass = `category-${product.abc_category?.toLowerCase() || 'c'}`;
+        
+        row.innerHTML = `
+            <td>${index + 1}</td>
+            <td>${product.product_name || 'Без названия'}</td>
+            <td>${product.product_code || ''}</td>
+            <td>${product.quantity ? parseFloat(product.quantity).toLocaleString() : 0}</td>
+            <td>${product.revenue ? parseFloat(product.revenue).toLocaleString(undefined, {minimumFractionDigits: 2}) : '0.00'}</td>
+            <td><span class="${abcClass}">${product.abc_category || 'C'}</span></td>
+            <td>${product.xyz_category || 'Z'}</td>
+            <td>${product.abc_xyz_category || 'CZ'}</td>
+        `;
+        
+        tableBody.appendChild(row);
+    });
+}
+
+function displayCategoryStats(stats) {
+    if (!analysisStats || !statsDetails) return;
+    
+    analysisStats.style.display = 'block';
+    
+    let statsHTML = `
+        <div class="stats-grid">
+    `;
+    
+    // ABC статистика
+    if (stats.abc) {
+        for (const [category, data] of Object.entries(stats.abc)) {
+            statsHTML += `
+                <div class="stat-item">
+                    <div class="stat-value">${data.products_count || 0}</div>
+                    <div class="stat-label">ABC ${category}</div>
+                    <div class="stat-sub">${data.revenue_percentage ? data.revenue_percentage.toFixed(1) : 0}% выручки</div>
+                </div>
+            `;
+        }
+    }
+    
+    // XYZ статистика
+    if (stats.xyz) {
+        for (const [category, data] of Object.entries(stats.xyz)) {
+            statsHTML += `
+                <div class="stat-item">
+                    <div class="stat-value">${data.products_count || 0}</div>
+                    <div class="stat-label">XYZ ${category}</div>
+                    <div class="stat-sub">${data.revenue_percentage ? data.revenue_percentage.toFixed(1) : 0}% выручки</div>
+                </div>
+            `;
+        }
+    }
+    
+    statsHTML += '</div>';
+    statsDetails.innerHTML = statsHTML;
+}
+
+function displayMatrixData(matrixData) {
+    // Обновляем информационную панель с данными матрицы
+    const matrixInfo = document.getElementById('matrixInfo');
+    if (matrixInfo) {
+        let matrixHTML = '<h4>Матрица ABC-XYZ:</h4><div class="matrix-grid">';
+        
+        // Группируем по ABC категориям
+        const grouped = {};
+        matrixData.forEach(cell => {
+            if (!grouped[cell.abc_category]) {
+                grouped[cell.abc_category] = [];
+            }
+            grouped[cell.abc_category].push(cell);
+        });
+        
+        // Создаем таблицу матрицы
+        matrixHTML += '<table class="matrix-table"><thead><tr><th>ABC\\XYZ</th><th>X</th><th>Y</th><th>Z</th></tr></thead><tbody>';
+        
+        ['A', 'B', 'C'].forEach(abcCat => {
+            matrixHTML += `<tr><td class="matrix-header">${abcCat}</td>`;
+            
+            ['X', 'Y', 'Z'].forEach(xyzCat => {
+                const cell = matrixData.find(c => c.abc_category === abcCat && c.xyz_category === xyzCat);
+                if (cell) {
+                    matrixHTML += `
+                        <td class="matrix-cell ${abcCat.toLowerCase()}">
+                            <strong>${cell.products_count}</strong> шт.<br>
+                            <small>${cell.total_revenue ? parseFloat(cell.total_revenue).toLocaleString() : 0}</small>
+                        </td>
+                    `;
+                } else {
+                    matrixHTML += `<td class="matrix-cell empty">-</td>`;
+                }
+            });
+            
+            matrixHTML += '</tr>';
+        });
+        
+        matrixHTML += '</tbody></table>';
+        matrixInfo.innerHTML = matrixHTML;
+    }
+}
+
+// В инициализации добавьте:
+document.addEventListener('DOMContentLoaded', function() {
+    // ... существующий код ...
+    
+    // При загрузке страницы пробуем загрузить последние данные из БД
+    setTimeout(async () => {
+        const hasData = await loadVisualizationData();
+        if (!hasData) {
+            console.log('В базе данных нет сохраненных анализов');
+            // Показываем сообщение о необходимости загрузить файл
+            showNotification('Загрузите Excel файл для начала анализа', 'info');
+        }
+    }, 1000);
+});
+
+
+
+// Добавьте после других функций в script.js
+
+async function loadAnalysisDataFromDB() {
+    try {
+        showNotification('Загрузка данных анализа из базы данных...', 'info');
+        
+        // Проверяем наличие данных
+        const checkResponse = await fetch(`${API_BASE_URL}/api/check-analysis-data`);
+        const checkData = await checkResponse.json();
+        
+        if (!checkData.has_data) {
+            showNotification('В базе данных нет сохраненных анализов', 'warning');
+            return false;
+        }
+        
+        // Загружаем данные анализа
+        const analysisResponse = await fetch(`${API_BASE_URL}/api/analysis-data?limit=100`);
+        const analysisData = await analysisResponse.json();
+        
+        if (analysisData.success && analysisData.data) {
+            // Отображаем данные в таблице
+            displayAnalysisTableFromDB(analysisData.data);
+            
+            // Загружаем статистику
+            const statsResponse = await fetch(`${API_BASE_URL}/api/analysis-stats`);
+            const statsData = await statsResponse.json();
+            
+            if (statsData.success) {
+                displayAnalysisStatsFromDB(statsData.stats);
+            }
+            
+            // Загружаем данные матрицы
+            const matrixResponse = await fetch(`${API_BASE_URL}/api/matrix-data`);
+            const matrixData = await matrixResponse.json();
+            
+            if (matrixData.success) {
+                updateMatrixInfoFromDB(matrixData.data);
+            }
+            
+            // Загружаем графики
+            const chartsResponse = await fetch(`${API_BASE_URL}/api/analysis-charts`);
+            const chartsData = await chartsResponse.json();
+            
+            if (chartsData.success && chartsData.charts) {
+                displayCharts(chartsData.charts);
+            } else {
+                // Если графиков нет в БД, генерируем новые
+                await autoLoadCharts();
+            }
+            
+            showNotification('Данные успешно загружены из базы данных', 'success');
+            return true;
+        }
+        
+        return false;
+        
+    } catch (error) {
+        console.error('Ошибка загрузки данных анализа из БД:', error);
+        showNotification('Ошибка загрузки данных из базы данных', 'error');
+        return false;
+    }
+}
+
+function displayAnalysisTableFromDB(data) {
+    if (!tableBody) return;
+    
+    tableBody.innerHTML = '';
+    
+    if (!data || data.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="8" style="text-align: center; padding: 40px;">
+                    Нет данных для отображения
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    data.forEach((item, index) => {
+        const row = document.createElement('tr');
+        
+        // Анимация
+        row.style.animationDelay = `${index * 0.05}s`;
+        row.style.opacity = '0';
+        row.style.animation = 'fadeIn 0.5s ease forwards';
+        
+        // Определяем класс для категории ABC
+        const abcClass = `category-${item.abc_category?.toLowerCase() || 'c'}`;
+        
+        row.innerHTML = `
+            <td>${index + 1}</td>
+            <td>${item.product_name || 'Без названия'}</td>
+            <td>${item.product_code || ''}</td>
+            <td>${item.quantity ? item.quantity.toLocaleString() : 0}</td>
+            <td>${item.revenue ? item.revenue.toLocaleString(undefined, {minimumFractionDigits: 2}) : '0.00'}</td>
+            <td><span class="${abcClass}">${item.abc_category || 'C'}</span></td>
+            <td>${item.xyz_category || 'Z'}</td>
+            <td>${item.abc_xyz_category || 'CZ'}</td>
+        `;
+        
+        tableBody.appendChild(row);
+    });
+}
+
+function displayAnalysisStatsFromDB(stats) {
+    if (!analysisStats || !statsDetails) return;
+    
+    analysisStats.style.display = 'block';
+    
+    let statsHTML = `
+        <p><strong>Всего товаров:</strong> ${stats.total_products || 0}</p>
+        <p><strong>Общая выручка:</strong> ${(stats.total_revenue || 0).toLocaleString()} у.е.</p>
+        <p><strong>Средняя выручка:</strong> ${(stats.avg_revenue || 0).toLocaleString(undefined, {minimumFractionDigits: 2})} у.е.</p>
+        <div class="stats-grid">
+    `;
+    
+    // Добавляем статистику ABC
+    if (stats.a_count !== undefined) {
+        statsHTML += `
+            <div class="stat-item">
+                <div class="stat-value">${stats.a_count}</div>
+                <div class="stat-label">Категория A</div>
+            </div>
+        `;
+    }
+    
+    if (stats.b_count !== undefined) {
+        statsHTML += `
+            <div class="stat-item">
+                <div class="stat-value">${stats.b_count}</div>
+                <div class="stat-label">Категория B</div>
+            </div>
+        `;
+    }
+    
+    if (stats.c_count !== undefined) {
+        statsHTML += `
+            <div class="stat-item">
+                <div class="stat-value">${stats.c_count}</div>
+                <div class="stat-label">Категория C</div>
+            </div>
+        `;
+    }
+    
+    // Добавляем статистику XYZ
+    if (stats.x_count !== undefined) {
+        statsHTML += `
+            <div class="stat-item">
+                <div class="stat-value">${stats.x_count}</div>
+                <div class="stat-label">Категория X</div>
+            </div>
+        `;
+    }
+    
+    if (stats.y_count !== undefined) {
+        statsHTML += `
+            <div class="stat-item">
+                <div class="stat-value">${stats.y_count}</div>
+                <div class="stat-label">Категория Y</div>
+            </div>
+        `;
+    }
+    
+    if (stats.z_count !== undefined) {
+        statsHTML += `
+            <div class="stat-item">
+                <div class="stat-value">${stats.z_count}</div>
+                <div class="stat-label">Категория Z</div>
+            </div>
+        `;
+    }
+    
+    statsHTML += '</div>';
+    
+    if (stats.top_product_name) {
+        statsHTML += `
+            <p><strong>Топ товар:</strong> ${stats.top_product_name}</p>
+            <p><strong>Выручка топ товара:</strong> ${(stats.top_product_revenue || 0).toLocaleString()} у.е.</p>
+        `;
+    }
+    
+    statsDetails.innerHTML = statsHTML;
+}
+
+function updateMatrixInfoFromDB(matrixData) {
+    if (!dynamicAnalysisInfo) return;
+    
+    let matrixHTML = '<h4>Матрица ABC-XYZ:</h4><div class="matrix-grid">';
+    
+    matrixData.forEach(item => {
+        const category = item.abc_xyz_category || '';
+        const count = item.products_count || 0;
+        const revenue = item.total_revenue || 0;
+        const recommendation = item.recommendation || '';
+        
+        matrixHTML += `
+            <div class="matrix-item">
+                <div class="matrix-category">${category}</div>
+                <div class="matrix-count">${count} товаров</div>
+                <div class="matrix-revenue">${revenue.toLocaleString()} у.е.</div>
+                <div class="matrix-recommendation">${recommendation}</div>
+            </div>
+        `;
+    });
+    
+    matrixHTML += '</div>';
+    
+    // Добавляем к существующему содержимому
+    const currentContent = dynamicAnalysisInfo.innerHTML;
+    dynamicAnalysisInfo.innerHTML = matrixHTML + currentContent;
+}
+
+// Обновите инициализацию в конце script.js
+document.addEventListener('DOMContentLoaded', function() {
+    // ... существующий код ...
+    
+    // Пробуем загрузить данные из БД анализа при загрузке страницы
+    setTimeout(async () => {
+        const hasData = await loadAnalysisDataFromDB();
+        if (!hasData) {
+            console.log('В базе данных анализа нет сохраненных данных');
+        }
+    }, 1000);
+});

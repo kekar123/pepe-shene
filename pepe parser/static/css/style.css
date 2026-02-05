@@ -1784,3 +1784,93 @@ button:active,
     80% { opacity: 1; transform: translateX(-50%) translateY(0); }
     100% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
 }
+
+/* Добавьте в static/css/style.css */
+
+.matrix-grid {
+    display: grid;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.matrix-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0;
+}
+
+.matrix-table th, .matrix-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: center;
+}
+
+.matrix-table th {
+    background-color: #f5f5f5;
+    font-weight: bold;
+}
+
+.matrix-header {
+    background-color: #f9f9f9;
+    font-weight: bold;
+}
+
+.matrix-cell {
+    position: relative;
+    min-height: 60px;
+    vertical-align: middle;
+}
+
+.matrix-cell.a {
+    background-color: rgba(46, 204, 113, 0.1);
+}
+
+.matrix-cell.b {
+    background-color: rgba(243, 156, 18, 0.1);
+}
+
+.matrix-cell.c {
+    background-color: rgba(231, 76, 60, 0.1);
+}
+
+.matrix-cell.empty {
+    background-color: #f9f9f9;
+    color: #999;
+}
+
+.matrix-cell strong {
+    display: block;
+    font-size: 16px;
+}
+
+.matrix-cell small {
+    font-size: 12px;
+    color: #666;
+}
+
+/* Дополнительные стили для статистики */
+.stat-item {
+    background: white;
+    border: 1px solid #eaeaea;
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: #2c3e50;
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    font-size: 14px;
+    color: #7f8c8d;
+    margin-bottom: 5px;
+}
+
+.stat-sub {
+    font-size: 12px;
+    color: #3498db;
+}

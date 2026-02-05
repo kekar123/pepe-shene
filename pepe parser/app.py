@@ -14,9 +14,13 @@ from sqlalchemy import func
 import sys
 
 # Добавляем путь к корню проекта для импорта модулей
-current_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.dirname(current_dir)
-sys.path.insert(0, parent_dir)
+BASE_DIR = Path(__file__).resolve().parent
+PARENT_DIR = BASE_DIR.parent
+sys.path.insert(0, str(BASE_DIR))
+sys.path.insert(0, str(PARENT_DIR))
+
+ANALYSIS_RESULTS_DIR = BASE_DIR / "analysis_results"
+ANALYSIS_RESULTS_DIR.mkdir(exist_ok=True, parents=True)
 
 try:
     from db.database import db
@@ -25,6 +29,16 @@ try:
 except ImportError as e:
     print(f"⚠️  Модули БД не найдены: {e}")
     DB_AVAILABLE = False
+
+# =============== НОВЫЙ ЗАГРУЗЧИК ДЛЯ АНАЛИЗА ===============
+try:
+    from analysis_db_loader import AnalysisDBLoader
+    ANALYSIS_DB_AVAILABLE = True
+    print("✅ AnalysisDBLoader загружен")
+except ImportError as e:
+    print(f"⚠️  AnalysisDBLoader не найден: {e}")
+    ANALYSIS_DB_AVAILABLE = False
+    AnalysisDBLoader = None
 
 # =============== ДОПОЛНЕНИЯ ДЛЯ ГРАФИКОВ ===============
 try:
@@ -41,14 +55,22 @@ except ImportError as e:
 app = Flask(__name__)
 CORS(app)
 
-# =============== ИНИЦИАЛИЗАЦИЯ БД ===============
+# =============== ИНИЦИАЛИЗАЦИЯ БАЗ ДАННЫХ ===============
 if DB_AVAILABLE:
     try:
         db.connect()
-        print("✅ База данных подключена")
+        print("✅ Основная база данных подключена")
     except Exception as e:
-        print(f"⚠️  Не удалось подключиться к БД: {e}")
-# ================================================
+        print(f"⚠️  Не удалось подключиться к основной БД: {e}")
+
+if ANALYSIS_DB_AVAILABLE:
+    try:
+        analysis_db = AnalysisDBLoader(str(ANALYSIS_RESULTS_DIR / "analysis_visualization.db"))
+        print("✅ База данных анализа подключена")
+    except Exception as e:
+        print(f"⚠️  Не удалось подключиться к БД анализа: {e}")
+        ANALYSIS_DB_AVAILABLE = False
+# ========================================================
 
 # Конфигурация
 UPLOAD_FOLDER = 'uploads'
@@ -56,10 +78,14 @@ OUTPUT_JSON_FOLDER = 'output_json'
 ANALYSIS_RESULTS_FOLDER = 'analysis_results'
 ALLOWED_EXTENSIONS = {'xls', 'xlsx'}
 
-for folder in [UPLOAD_FOLDER, OUTPUT_JSON_FOLDER, ANALYSIS_RESULTS_FOLDER]:
-    Path(folder).mkdir(exist_ok=True)
+UPLOAD_DIR = BASE_DIR / UPLOAD_FOLDER
+OUTPUT_JSON_DIR = BASE_DIR / OUTPUT_JSON_FOLDER
+ANALYSIS_RESULTS_DIR = BASE_DIR / ANALYSIS_RESULTS_FOLDER
 
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+for folder in [UPLOAD_DIR, OUTPUT_JSON_DIR, ANALYSIS_RESULTS_DIR]:
+    folder.mkdir(exist_ok=True, parents=True)
+
+app.config['UPLOAD_FOLDER'] = str(UPLOAD_DIR)
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10 МБ
 
 def allowed_file(filename):
@@ -73,7 +99,7 @@ def index():
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    """Обработка загрузки файла с автоматической генерацией графиков"""
+    """Обработка загрузки файла с автоматической генерацией графиков и сохранением в БД"""
     try:
         if 'file' not in request.files:
             return jsonify({'error': 'Файл не найден в запросе'}), 400
@@ -94,23 +120,71 @@ def upload_file():
         # Парсим Excel в JSON
         json_result = xls_to_json_single(
             input_file=filepath,
-            output_folder=OUTPUT_JSON_FOLDER
+            output_folder=str(OUTPUT_JSON_DIR)
         )
         
         if not json_result:
             return jsonify({'error': 'Ошибка при парсинге файла'}), 500
         
         # Выполняем ABC-XYZ анализ
-        analysis_result = perform_abc_xyz_analysis(
+        analysis_data = perform_abc_xyz_analysis(
             json_file_path=json_result['output'],
             output_file_name=f"{Path(filename).stem}_analysis.json"
         )
         
-        if not analysis_result:
+        if not analysis_data:
             return jsonify({'error': 'Ошибка при выполнении анализа'}), 500
         
-        # =============== ЗАГРУЗКА В БАЗУ ДАННЫХ ===============
+        # =============== СОХРАНЕНИЕ АНАЛИЗА В БД ДЛЯ ГРАФИКОВ ===============
         db_info = {
+            'loaded': False,
+            'analysis_id': None,
+            'products_count': 0,
+            'errors': []
+        }
+        
+        if ANALYSIS_DB_AVAILABLE:
+            try:
+                # Сохраняем временный JSON файл с результатами анализа
+                import tempfile
+                import json
+                
+                # Создаем временный файл с результатами анализа
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as temp_file:
+                    json.dump(analysis_data, temp_file, ensure_ascii=False, indent=2)
+                    temp_file_path = temp_file.name
+                
+                # Загружаем анализ в БД
+                db_result = analysis_db.load_analysis_from_json(
+                    analysis_file_path=temp_file_path,
+                    analysis_type="abc_xyz"
+                )
+                
+                # Удаляем временный файл
+                os.unlink(temp_file_path)
+                
+                if db_result['success']:
+                    db_info = {
+                        'loaded': True,
+                        'analysis_id': db_result['analysis_file_id'],
+                        'products_count': db_result.get('products_loaded', 0),
+                        'analysis_data_count': db_result.get('analysis_data_loaded', 0),
+                        'errors': db_result.get('errors', [])
+                    }
+                    
+                    print(f"✅ Анализ сохранен в БД. ID: {db_info['analysis_id']}")
+                else:
+                    db_info['errors'] = db_result.get('errors', ['Неизвестная ошибка'])
+                    
+            except Exception as db_error:
+                print(f"❌ Ошибка загрузки в БД анализа: {db_error}")
+                import traceback
+                traceback.print_exc()
+                db_info['errors'] = [str(db_error)]
+        # ======================================================================
+        
+        # =============== ЗАГРУЗКА В ОСНОВНУЮ БАЗУ ДАННЫХ ===============
+        main_db_info = {
             'loaded': False,
             'store_items': 0,
             'analysis_items': 0,
@@ -119,40 +193,41 @@ def upload_file():
         
         if DB_AVAILABLE:
             try:
-                loader = JSONToDBLoader()
-                db_result = loader.load_from_json(analysis_result)
-                db_info = {
-                    'loaded': True,
-                    'store_items': db_result.get('store_inserted', 0),
-                    'analysis_items': db_result.get('analysis_inserted', 0),
-                    'errors': db_result.get('errors', [])
-                }
-            except Exception as db_error:
-                db_info['errors'] = [str(db_error)]
-        # ======================================================
+                # Сохраняем также в основную БД
+                temp_file_path = None
+                try:
+                    # Создаем временный файл для основной БД
+                    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as temp_file:
+                        json.dump(analysis_data, temp_file, ensure_ascii=False, indent=2)
+                        temp_file_path = temp_file.name
+                    
+                    loader = JSONToDBLoader()
+                    main_db_result = loader.load_from_json(temp_file_path)
+                    main_db_info = {
+                        'loaded': True,
+                        'store_items': main_db_result.get('store_inserted', 0),
+                        'analysis_items': main_db_result.get('analysis_inserted', 0),
+                        'errors': main_db_result.get('errors', [])
+                    }
+                finally:
+                    # Удаляем временный файл
+                    if temp_file_path and os.path.exists(temp_file_path):
+                        os.unlink(temp_file_path)
+                        
+            except Exception as main_db_error:
+                print(f"⚠️ Ошибка загрузки в основную БД: {main_db_error}")
+                main_db_info['errors'] = [str(main_db_error)]
+        # =================================================================
         
-        # Читаем результаты анализа
-        with open(analysis_result, 'r', encoding='utf-8') as f:
-            analysis_data = json.load(f)
-        
-        # Подсчитываем статистику
-        abc_stats = {}
-        xyz_stats = {}
-        abc_xyz_stats = {}
-        
-        for item in analysis_data:
-            abc_stats[item['ABC']] = abc_stats.get(item['ABC'], 0) + 1
-            xyz_stats[item['XYZ']] = xyz_stats.get(item['XYZ'], 0) + 1
-            abc_xyz_stats[item['ABC_XYZ']] = abc_xyz_stats.get(item['ABC_XYZ'], 0) + 1
-        
-        # =============== АВТОМАТИЧЕСКАЯ ГЕНЕРАЦИЯ ГРАФИКОВ ===============
+        # =============== ГЕНЕРАЦИЯ ГРАФИКОВ ===============
         charts_info = {
             'generated': False,
             'count': 0,
             'errors': []
         }
         
-        if DB_AVAILABLE and CHARTS_AVAILABLE and db_info['loaded']:
+        # Используем основную БД для генерации графиков
+        if DB_AVAILABLE and CHARTS_AVAILABLE:
             try:
                 session = db.get_session()
                 generator = ChartGenerator(session)
@@ -166,19 +241,50 @@ def upload_file():
                         'charts': charts
                     }
                     print(f"✅ Автоматически сгенерировано {len(charts)} графиков")
+                    
+                    # Сохраняем графики в БД анализа
+                    if ANALYSIS_DB_AVAILABLE and db_info['loaded']:
+                        analysis_db.save_charts(
+                            db_info['analysis_id'], 
+                            charts_info['charts']
+                        )
+                        print(f"✅ Графики сохранены в БД анализа")
+                        
             except Exception as chart_error:
                 print(f"⚠️  Ошибка генерации графиков: {chart_error}")
                 charts_info['errors'] = [str(chart_error)]
-        # =================================================================
+        # =================================================
+        
+        # Подсчитываем статистику для ответа
+        abc_stats = {}
+        xyz_stats = {}
+        abc_xyz_stats = {}
+        
+        for item in analysis_data:
+            if isinstance(item, dict):
+                abc = item.get('ABC') or item.get('abc_category')
+                xyz = item.get('XYZ') or item.get('xyz_category')
+                abc_xyz = item.get('ABC_XYZ') or item.get('abc_xyz_category')
+                
+                if abc:
+                    abc_stats[abc] = abc_stats.get(abc, 0) + 1
+                if xyz:
+                    xyz_stats[xyz] = xyz_stats.get(xyz, 0) + 1
+                if abc_xyz:
+                    abc_xyz_stats[abc_xyz] = abc_xyz_stats.get(abc_xyz, 0) + 1
+        
+        # Определяем имена файлов для скачивания
+        analysis_filename = f"{Path(filename).stem}_analysis.json"
         
         response_data = {
             'success': True,
             'message': f'Файл "{filename}" успешно обработан',
             'original_file': filename,
             'json_file': json_result['file_name'],
-            'analysis_file': Path(analysis_result).name,
+            'analysis_file': analysis_filename,
             'db_info': db_info,
-            'charts_info': charts_info,  # Добавляем информацию о графиках
+            'main_db_info': main_db_info,
+            'charts_info': charts_info,
             'stats': {
                 'total_items': len(analysis_data),
                 'abc_distribution': abc_stats,
@@ -187,13 +293,16 @@ def upload_file():
             },
             'download_links': {
                 'json': f'/download/{OUTPUT_JSON_FOLDER}/{json_result["file_name"]}',
-                'analysis': f'/download/{ANALYSIS_RESULTS_FOLDER}/{Path(analysis_result).name}'
+                'analysis': f'/download/{ANALYSIS_RESULTS_FOLDER}/{analysis_filename}'
             }
         }
         
         return jsonify(response_data)
         
     except Exception as e:
+        print(f"❌ Критическая ошибка обработки файла: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @app.route('/reorder-warehouse', methods=['POST'])
@@ -219,7 +328,15 @@ def reorder_warehouse():
 @app.route('/download/<folder>/<filename>')
 def download_file(folder, filename):
     """Скачивание обработанных файлов"""
-    return send_from_directory(folder, filename, as_attachment=True)
+    folder_map = {
+        UPLOAD_FOLDER: UPLOAD_DIR,
+        OUTPUT_JSON_FOLDER: OUTPUT_JSON_DIR,
+        ANALYSIS_RESULTS_FOLDER: ANALYSIS_RESULTS_DIR
+    }
+    directory = folder_map.get(folder)
+    if not directory:
+        return jsonify({'error': 'РЎРµРєС†РёСЏ РЅРµ РЅР°Р№РґРµРЅР°'}), 404
+    return send_from_directory(directory, filename, as_attachment=True)
 
 @app.route('/files')
 def list_files():
@@ -227,10 +344,10 @@ def list_files():
     files = []
     
     # Собираем JSON файлы
-    json_folder = Path(OUTPUT_JSON_FOLDER)
+    json_folder = OUTPUT_JSON_DIR
     if json_folder.exists():
         for json_file in json_folder.glob('*.json'):
-            analysis_file = Path(ANALYSIS_RESULTS_FOLDER) / f"{json_file.stem}_analysis.json"
+            analysis_file = ANALYSIS_RESULTS_DIR / f"{json_file.stem}_analysis.json"
             files.append({
                 'name': json_file.name,
                 'type': 'json',
@@ -240,7 +357,7 @@ def list_files():
             })
     
     # Собираем файлы анализа
-    analysis_folder = Path(ANALYSIS_RESULTS_FOLDER)
+    analysis_folder = ANALYSIS_RESULTS_DIR
     if analysis_folder.exists():
         for analysis_file in analysis_folder.glob('*_analysis.json'):
             files.append({
@@ -252,12 +369,136 @@ def list_files():
     
     return jsonify({'files': files})
 
-# =============== НОВЫЕ ЭНДПОИНТЫ ДЛЯ ГРАФИКОВ ===============
+# =============== НОВЫЕ ЭНДПОИНТЫ ДЛЯ РАБОТЫ С БД АНАЛИЗА ===============
+@app.route('/api/analysis-data', methods=['GET'])
+def get_analysis_data():
+    """API для получения данных анализа из БД анализа"""
+    if not ANALYSIS_DB_AVAILABLE:
+        return jsonify({'success': False, 'error': 'База данных анализа не доступна'}), 500
+    
+    try:
+        limit = request.args.get('limit', 100, type=int)
+        analysis_id = request.args.get('analysis_id', type=int)
+        
+        data = analysis_db.get_analysis_data(analysis_id, limit)
+        
+        return jsonify({
+            'success': True,
+            'count': len(data),
+            'data': data,
+            'analysis_id': analysis_id or 'latest'
+        })
+        
+    except Exception as e:
+        print(f"❌ Ошибка получения данных анализа: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/analysis-stats', methods=['GET'])
+def get_analysis_stats():
+    """API для получения статистики анализа из БД анализа"""
+    if not ANALYSIS_DB_AVAILABLE:
+        return jsonify({'success': False, 'error': 'База данных анализа не доступна'}), 500
+    
+    try:
+        analysis_id = request.args.get('analysis_id', type=int)
+        
+        stats = analysis_db.get_analysis_stats(analysis_id)
+        
+        return jsonify({
+            'success': True,
+            'stats': stats
+        })
+        
+    except Exception as e:
+        print(f"❌ Ошибка получения статистики анализа: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/matrix-data', methods=['GET'])
+def get_matrix_data():
+    """API для получения данных матрицы из БД анализа"""
+    if not ANALYSIS_DB_AVAILABLE:
+        return jsonify({'success': False, 'error': 'База данных анализа не доступна'}), 500
+    
+    try:
+        analysis_id = request.args.get('analysis_id', type=int)
+        
+        matrix_data = analysis_db.get_matrix_data(analysis_id)
+        
+        return jsonify({
+            'success': True,
+            'count': len(matrix_data),
+            'data': matrix_data
+        })
+        
+    except Exception as e:
+        print(f"❌ Ошибка получения данных матрицы: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/analysis-charts', methods=['GET'])
+def get_analysis_charts():
+    """API для получения графиков из БД анализа"""
+    if not ANALYSIS_DB_AVAILABLE:
+        return jsonify({'success': False, 'error': 'База данных анализа не доступна'}), 500
+    
+    try:
+        analysis_id = request.args.get('analysis_id', type=int)
+        
+        charts = analysis_db.get_charts(analysis_id)
+        
+        return jsonify({
+            'success': True,
+            'count': len(charts),
+            'charts': charts
+        })
+        
+    except Exception as e:
+        print(f"❌ Ошибка получения графиков: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/latest-analysis', methods=['GET'])
+def get_latest_analysis():
+    """API для получения информации о последнем анализе"""
+    if not ANALYSIS_DB_AVAILABLE:
+        return jsonify({'success': False, 'error': 'База данных анализа не доступна'}), 500
+    
+    try:
+        latest = analysis_db.get_latest_analysis()
+        
+        return jsonify({
+            'success': True,
+            'latest': latest
+        })
+        
+    except Exception as e:
+        print(f"❌ Ошибка получения последнего анализа: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/check-analysis-data')
+def check_analysis_data():
+    """Проверка наличия данных в БД анализа"""
+    if not ANALYSIS_DB_AVAILABLE:
+        return jsonify({'has_data': False, 'error': 'База данных анализа не доступна'}), 500
+    
+    try:
+        latest = analysis_db.get_latest_analysis()
+        has_data = bool(latest and 'analysis_id' in latest)
+        
+        return jsonify({
+            'has_data': has_data,
+            'latest': latest,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        return jsonify({'has_data': False, 'error': str(e)}), 500
+# =========================================================================
+
+# =============== ЭНДПОИНТЫ ДЛЯ ГРАФИКОВ ИЗ ОСНОВНОЙ БД ===============
 @app.route('/api/charts', methods=['GET'])
 def get_charts():
     """API для получения всех графиков с отладочной информацией"""
     if not DB_AVAILABLE:
-        return jsonify({'success': False, 'error': 'База данных не доступна'}), 500
+        return jsonify({'success': False, 'error': 'Основная база данных не доступна'}), 500
     
     if not CHARTS_AVAILABLE:
         return jsonify({'success': False, 'error': 'Модуль графиков не доступен'}), 500
@@ -338,8 +579,7 @@ def get_specific_chart(chart_type):
             'abc_pie': generator.create_abc_pie_chart,
             'xyz_bar': generator.create_xyz_bar_chart,
             'abc_xyz_matrix': generator.create_abc_xyz_matrix,
-            'top_products': generator.create_top_products_chart,
-            'category_comparison': generator.create_category_comparison
+            'top_products': generator.create_top_products_chart
         }
         
         if chart_type not in chart_map:
@@ -375,27 +615,28 @@ def get_basic_stats():
         session = db.get_session()
         
         # Общая статистика
-        total_items = session.query(func.count('*')).select_from(db.models.Analysis).scalar() or 0
+        from db.models import Analysis
+        total_items = session.query(func.count('*')).select_from(Analysis).scalar() or 0
         
         # Получаем сумму выручки
-        revenue_result = session.query(func.sum(db.models.Analysis.revenue)).scalar()
+        revenue_result = session.query(func.sum(Analysis.revenue)).scalar()
         total_revenue = float(revenue_result) if revenue_result else 0
         
         # Статистика по категориям ABC
         abc_stats_query = session.query(
-            db.models.Analysis.abc_category,
-            func.count(db.models.Analysis.id).label('count'),
-            func.sum(db.models.Analysis.revenue).label('total_revenue')
-        ).filter(db.models.Analysis.abc_category.isnot(None)).group_by(db.models.Analysis.abc_category)
+            Analysis.abc_category,
+            func.count(Analysis.id).label('count'),
+            func.sum(Analysis.revenue).label('total_revenue')
+        ).filter(Analysis.abc_category.isnot(None)).group_by(Analysis.abc_category)
         
         abc_stats = abc_stats_query.all()
         
         # Статистика по категориям XYZ
         xyz_stats_query = session.query(
-            db.models.Analysis.xyz_category,
-            func.count(db.models.Analysis.id).label('count'),
-            func.sum(db.models.Analysis.revenue).label('total_revenue')
-        ).filter(db.models.Analysis.xyz_category.isnot(None)).group_by(db.models.Analysis.xyz_category)
+            Analysis.xyz_category,
+            func.count(Analysis.id).label('count'),
+            func.sum(Analysis.revenue).label('total_revenue')
+        ).filter(Analysis.xyz_category.isnot(None)).group_by(Analysis.xyz_category)
         
         xyz_stats = xyz_stats_query.all()
         
@@ -437,7 +678,7 @@ def get_basic_stats():
             })
         
         # Информация о последнем обновлении
-        last_update_file = Path(ANALYSIS_RESULTS_FOLDER)
+        last_update_file = ANALYSIS_RESULTS_DIR
         last_update = None
         if last_update_file.exists():
             analysis_files = list(last_update_file.glob('*_analysis.json'))
@@ -464,53 +705,9 @@ def get_basic_stats():
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/api/analysis-data')
-def get_analysis_data():
-    """API для получения данных анализа из БД в формате для таблицы"""
-    if not DB_AVAILABLE:
-        return jsonify({'success': False, 'error': 'База данных не доступна'}), 500
-    
-    try:
-        session = db.get_session()
-        
-        # Получаем все записи анализа
-        analyses = session.query(
-            db.models.Analysis.id,
-            db.models.Analysis.product_name,
-            db.models.Analysis.revenue,
-            db.models.Analysis.abc_category,
-            db.models.Analysis.xyz_category,
-            db.models.Analysis.abc_xyz_category,
-            db.models.Analysis.analysis_date
-        ).order_by(db.models.Analysis.revenue.desc()).all()
-        
-        session.close()
-        
-        result = []
-        for analysis in analyses:
-            result.append({
-                'id': analysis.id,
-                'name': analysis.product_name,
-                'revenue': float(analysis.revenue) if analysis.revenue else 0,
-                'ABC': analysis.abc_category or '',
-                'XYZ': analysis.xyz_category or '',
-                'ABC_XYZ': analysis.abc_xyz_category or '',
-                'analysis_date': analysis.analysis_date.isoformat() if analysis.analysis_date else None
-            })
-        
-        return jsonify({
-            'success': True,
-            'count': len(result),
-            'data': result
-        })
-        
-    except Exception as e:
-        print(f"❌ Ошибка получения данных анализа: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
 @app.route('/api/check-data')
 def check_data():
-    """Проверка наличия данных в БД"""
+    """Проверка наличия данных в основной БД"""
     if not DB_AVAILABLE:
         return jsonify({'has_data': False, 'error': 'База данных не доступна'}), 500
     
@@ -579,10 +776,11 @@ def system_status():
     """Проверка статуса системы"""
     status = {
         'database': DB_AVAILABLE,
+        'analysis_database': ANALYSIS_DB_AVAILABLE,
         'charts': CHARTS_AVAILABLE,
-        'upload_folder': os.path.exists(UPLOAD_FOLDER),
-        'analysis_folder': os.path.exists(ANALYSIS_RESULTS_FOLDER),
-        'total_analysis_files': len(list(Path(ANALYSIS_RESULTS_FOLDER).glob('*.json'))),
+        'upload_folder': UPLOAD_DIR.exists(),
+        'analysis_folder': ANALYSIS_RESULTS_DIR.exists(),
+        'total_analysis_files': len(list(ANALYSIS_RESULTS_DIR.glob('*.json'))),
         'timestamp': datetime.now().isoformat()
     }
     
@@ -595,12 +793,20 @@ def system_status():
         except:
             status['db_records'] = 'error'
     
+    if ANALYSIS_DB_AVAILABLE:
+        try:
+            latest = analysis_db.get_latest_analysis()
+            status['analysis_db_has_data'] = bool(latest and 'analysis_id' in latest)
+            status['latest_analysis'] = latest
+        except:
+            status['analysis_db_has_data'] = 'error'
+    
     return jsonify(status)
 
 # =============== СТАРЫЕ ЭНДПОИНТЫ ДЛЯ БАЗЫ ДАННЫХ ===============
 @app.route('/api/load-to-db', methods=['POST'])
 def load_json_to_db():
-    """API для загрузки JSON файла в базу данных"""
+    """API для загрузки JSON файла в основную базу данных"""
     if not DB_AVAILABLE:
         return jsonify({'success': False, 'error': 'База данных не доступна'}), 500
     
@@ -614,11 +820,11 @@ def load_json_to_db():
         # Проверяем существование файла
         if not os.path.exists(json_file_path):
             # Пробуем найти в папке output_json
+            base_name = os.path.basename(json_file_path)
             possible_paths = [
                 json_file_path,
-                os.path.join(OUTPUT_JSON_FOLDER, os.path.basename(json_file_path)),
-                os.path.join('output_json', os.path.basename(json_file_path)),
-                os.path.join(parent_dir, 'output_json', os.path.basename(json_file_path))
+                str(OUTPUT_JSON_DIR / base_name),
+                str(BASE_DIR / "output_json" / base_name)
             ]
             
             for path in possible_paths:
@@ -643,7 +849,7 @@ def load_json_to_db():
 
 @app.route('/api/store', methods=['GET'])
 def get_store_items():
-    """API для получения товаров со склада из БД"""
+    """API для получения товаров со склада из основной БД"""
     if not DB_AVAILABLE:
         return jsonify({'success': False, 'error': 'База данных не доступна'}), 500
     
@@ -674,7 +880,7 @@ def get_store_items():
 
 @app.route('/api/analysis', methods=['GET'])
 def get_analysis():
-    """API для получения результатов анализа из БД"""
+    """API для получения результатов анализа из основной БД"""
     if not DB_AVAILABLE:
         return jsonify({'success': False, 'error': 'База данных не доступна'}), 500
     
@@ -716,7 +922,12 @@ def health_check():
         'status': 'ok',
         'timestamp': datetime.now().isoformat(),
         'service': 'ABC/XYZ Analyzer API',
-        'version': '2.0'
+        'version': '2.0',
+        'databases': {
+            'main': DB_AVAILABLE,
+            'analysis': ANALYSIS_DB_AVAILABLE,
+            'charts': CHARTS_AVAILABLE
+        }
     })
 
 @app.route('/api/clear-cache', methods=['POST'])
@@ -736,7 +947,7 @@ def clear_cache():
 def export_data():
     """Экспорт данных в формате CSV"""
     try:
-        # Получаем данные из БД
+        # Получаем данные из основной БД
         if DB_AVAILABLE:
             session = db.get_session()
             from db.models import Analysis
@@ -761,11 +972,11 @@ def export_data():
             df = pd.DataFrame(data)
             
             # Сохраняем во временный файл
-            export_path = Path(ANALYSIS_RESULTS_FOLDER) / f'export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
+            export_path = ANALYSIS_RESULTS_DIR / f'export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
             df.to_csv(export_path, index=False, encoding='utf-8-sig')
             
             return send_from_directory(
-                ANALYSIS_RESULTS_FOLDER,
+                ANALYSIS_RESULTS_DIR,
                 export_path.name,
                 as_attachment=True,
                 mimetype='text/csv'
@@ -776,11 +987,11 @@ def export_data():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/api/get-latest-analysis')
-def get_latest_analysis():
+@app.route('/api/get-latest-analysis-file')
+def get_latest_analysis_file():
     """Получение последнего файла анализа"""
     try:
-        analysis_folder = Path(ANALYSIS_RESULTS_FOLDER)
+        analysis_folder = ANALYSIS_RESULTS_DIR
         if not analysis_folder.exists():
             return jsonify({'success': False, 'error': 'Папка с анализами не найдена'}), 404
         
@@ -851,7 +1062,6 @@ def auto_load_charts():
         print(f"❌ Ошибка автоматической загрузки графиков: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
     
-
     # Отладочные эндпоинты
 @app.route('/api/debug-matrix')
 def debug_matrix():
@@ -962,18 +1172,22 @@ if __name__ == '__main__':
     print("=" * 60)
     print("🚀 ABC/XYZ Analyzer API v2.0 запускается...")
     print(f"📁 Рабочая директория: {os.getcwd()}")
-    print(f"📊 База данных: {'✅ Доступна' if DB_AVAILABLE else '❌ Не доступна'}")
+    print(f"📊 Основная база данных: {'✅ Доступна' if DB_AVAILABLE else '❌ Не доступна'}")
+    print(f"📊 База данных анализа: {'✅ Доступна' if ANALYSIS_DB_AVAILABLE else '❌ Не доступна'}")
     print(f"📈 Графики: {'✅ Доступны' if CHARTS_AVAILABLE else '❌ Не доступны'}")
-    print(f"📂 Папка загрузок: {UPLOAD_FOLDER} ({'✅ Существует' if os.path.exists(UPLOAD_FOLDER) else '❌ Не существует'})")
-    print(f"📂 Папка результатов: {ANALYSIS_RESULTS_FOLDER} ({'✅ Существует' if os.path.exists(ANALYSIS_RESULTS_FOLDER) else '❌ Не существует'})")
+    print(f"📂 Папка загрузок: {UPLOAD_FOLDER} ({'✅ Существует' if UPLOAD_DIR.exists() else '❌ Не существует'})")
+    print(f"📂 Папка результатов: {ANALYSIS_RESULTS_FOLDER} ({'✅ Существует' if ANALYSIS_RESULTS_DIR.exists() else '❌ Не существует'})")
     print(f"🌐 Сервер запустится по адресу: http://localhost:5000")
     print("=" * 60)
     print("🔧 Доступные эндпоинты:")
     print("   • /                    - Главная страница")
-    print("   • /upload              - Загрузка файла")
-    print("   • /api/charts          - Все графики")
-    print("   • /api/stats           - Статистика")
-    print("   • /api/analysis-data   - Данные для таблицы")
+    print("   • /upload              - Загрузка файла (с автосохранением в БД)")
+    print("   • /api/analysis-data   - Данные из БД анализа для таблицы")
+    print("   • /api/analysis-stats  - Статистика из БД анализа")
+    print("   • /api/matrix-data     - Матрица из БД анализа")
+    print("   • /api/analysis-charts - Графики из БД анализа")
+    print("   • /api/charts          - Графики из основной БД")
+    print("   • /api/stats           - Статистика из основной БД")
     print("   • /api/system-status   - Статус системы")
     print("   • /health              - Проверка здоровья")
     print("=" * 60)
