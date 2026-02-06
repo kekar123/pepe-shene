@@ -2,6 +2,9 @@ import matplotlib.pyplot as plt
 import io
 import base64
 import numpy as np
+import sqlite3
+import json
+from pathlib import Path
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from db.models import Analysis
@@ -10,31 +13,164 @@ from matplotlib.patches import Patch
 from matplotlib import colors
 
 class ChartGenerator:
-    def __init__(self, session: Session):
+    def __init__(self, session: Session, analysis_db=None, analysis_data=None):
         self.session = session
+        self.analysis_db = analysis_db
+        self.analysis_db_path = getattr(analysis_db, "db_path", None) if analysis_db else None
+        self.analysis_data = analysis_data
         # Устанавливаем стиль для лучшей читаемости
         plt.style.use('default')
         plt.rcParams['figure.facecolor'] = 'white'
         plt.rcParams['axes.facecolor'] = 'white'
         plt.rcParams['font.size'] = 10
+
+    def _normalize_analysis_data(self):
+        data = self.analysis_data
+        if isinstance(data, dict):
+            if "results" in data and isinstance(data["results"], list):
+                return data["results"]
+            if "data" in data and isinstance(data["data"], list):
+                return data["data"]
+            return []
+        if isinstance(data, list):
+            return data
+        return []
+
+    def _load_latest_analysis_results(self):
+        try:
+            base_dir = Path(__file__).resolve().parent
+            results_dir = base_dir / "pepe parser" / "analysis_results"
+            if not results_dir.exists():
+                return []
+            candidates = list(results_dir.glob("*_analysis.json"))
+            if not candidates:
+                return []
+            latest_file = max(candidates, key=lambda p: p.stat().st_mtime)
+            with latest_file.open("r", encoding="utf-8") as f:
+                data = json.load(f)
+            if isinstance(data, dict):
+                if "results" in data and isinstance(data["results"], list):
+                    return data["results"]
+                if "data" in data and isinstance(data["data"], list):
+                    return data["data"]
+            if isinstance(data, list):
+                return data
+        except Exception as e:
+            print(f"⚠️ Не удалось прочитать последний analysis_results JSON: {e}")
+        return []
     
     def create_abc_pie_chart(self):
         """Круговая диаграмма ABC анализа с отладкой"""
         try:
             print("🔍 Создаю ABC круговую диаграмму...")
             
-            # Получаем данные по ABC категориям
-            query = self.session.query(
-                Analysis.abc_category,
-                func.sum(Analysis.revenue).label('total_revenue'),
-                func.count(Analysis.id).label('count')
-            ).filter(Analysis.abc_category.isnot(None)).group_by(Analysis.abc_category)
-            
-            results = query.all()
+            # Получаем данные по ABC категориям (предпочтительно по количеству)
+            results = []
+            use_quantity_data = False
+
+            if self.analysis_db_path:
+                try:
+                    with sqlite3.connect(self.analysis_db_path) as conn:
+                        cursor = conn.cursor()
+                        cursor.execute("SELECT MAX(id) FROM analysis_files")
+                        row = cursor.fetchone()
+                        analysis_id = row[0] if row else None
+
+                        if analysis_id:
+                            cursor.execute("SELECT COUNT(*) FROM analysis_data WHERE analysis_file_id = ?", (analysis_id,))
+                            count_rows = cursor.fetchone()[0]
+                            print(f"ℹ️ analysis_db: analysis_id={analysis_id}, rows={count_rows}")
+                            cursor.execute('''
+                                SELECT abc_category,
+                                       SUM(quantity) AS total_quantity,
+                                       COUNT(*) AS products_count
+                                FROM analysis_data
+                                WHERE analysis_file_id = ?
+                                  AND abc_category IS NOT NULL
+                                GROUP BY abc_category
+                            ''', (analysis_id,))
+                            results = cursor.fetchall()
+                            if results:
+                                use_quantity_data = True
+                        else:
+                            print("⚠️ analysis_db: analysis_files пустая, нет analysis_id")
+                except Exception as e:
+                    print(f"⚠️ Не удалось получить данные по количеству: {e}")
+            else:
+                print("⚠️ analysis_db_path не задан, использую выручку")
+
+            # Если данных по количеству нет, пробуем из переданных analysis_data
+            normalized_data = self._normalize_analysis_data()
+            if not results and normalized_data:
+                try:
+                    totals = {}
+                    counts_map = {}
+                    for item in normalized_data:
+                        if not isinstance(item, dict):
+                            continue
+                        cat = item.get('ABC') or item.get('abc_category')
+                        qty = item.get('quantity', 0)
+                        if not cat:
+                            continue
+                        try:
+                            qty_val = float(qty)
+                        except (ValueError, TypeError):
+                            continue
+                        if not np.isfinite(qty_val) or qty_val < 0:
+                            continue
+                        totals[cat] = totals.get(cat, 0) + qty_val
+                        counts_map[cat] = counts_map.get(cat, 0) + 1
+                    if totals:
+                        results = [(cat, totals[cat], counts_map.get(cat, 0)) for cat in totals.keys()]
+                        use_quantity_data = True
+                        print("ℹ️ Использую quantity из analysis_data")
+                    else:
+                        print("⚠️ analysis_data есть, но quantity не найден")
+                except Exception as e:
+                    print(f"⚠️ Не удалось получить quantity из analysis_data: {e}")
+
+            # Если и это не помогло, пробуем загрузить последний JSON из analysis_results
+            if not results:
+                latest_data = self._load_latest_analysis_results()
+                if latest_data:
+                    try:
+                        totals = {}
+                        counts_map = {}
+                        for item in latest_data:
+                            if not isinstance(item, dict):
+                                continue
+                            cat = item.get('ABC') or item.get('abc_category')
+                            qty = item.get('quantity', 0)
+                            if not cat:
+                                continue
+                            try:
+                                qty_val = float(qty)
+                            except (ValueError, TypeError):
+                                continue
+                            if not np.isfinite(qty_val) or qty_val < 0:
+                                continue
+                            totals[cat] = totals.get(cat, 0) + qty_val
+                            counts_map[cat] = counts_map.get(cat, 0) + 1
+                        if totals:
+                            results = [(cat, totals[cat], counts_map.get(cat, 0)) for cat in totals.keys()]
+                            use_quantity_data = True
+                            print("ℹ️ Использую quantity из последнего analysis_results JSON")
+                    except Exception as e:
+                        print(f"⚠️ Не удалось получить quantity из analysis_results JSON: {e}")
+
+            if not results:
+                # Fallback: данные по выручке из основной БД
+                query = self.session.query(
+                    Analysis.abc_category,
+                    func.sum(Analysis.revenue).label('total_revenue'),
+                    func.count(Analysis.id).label('count')
+                ).filter(Analysis.abc_category.isnot(None)).group_by(Analysis.abc_category)
+                results = query.all()
             
             print(f"📊 Найдено ABC категорий: {len(results)}")
-            for cat, revenue, count in results:
-                print(f"   • {cat}: {count} товаров, {revenue:,.0f} у.е.")
+            for cat, value, count in results:
+                unit = "шт." if use_quantity_data else "у.е."
+                print(f"   • {cat}: {count} товаров, {value:,.0f} {unit}")
             
             if not results:
                 print("⚠️ Нет данных для ABC диаграммы")
@@ -42,18 +178,56 @@ class ChartGenerator:
             
             # Подготавливаем данные
             categories = []
-            revenues = []
+            values = []
             counts = []
             
-            for cat, revenue, count in results:
-                if cat:
-                    categories.append(cat)
-                    revenues.append(float(revenue))
-                    counts.append(count)
+            for cat, value, count in results:
+                if not cat:
+                    continue
+                if value is None:
+                    continue
+                value = float(value)
+                if not np.isfinite(value):
+                    continue
+                if value < 0:
+                    continue
+                categories.append(cat)
+                values.append(value)
+                counts.append(count)
             
-            if not revenues:
+            if not values:
                 print("⚠️ Нет числовых данных для ABC диаграммы")
                 return None
+            
+            if sum(values) <= 0:
+                if use_quantity_data:
+                    print("⚠️ Сумма количества равна 0, пробую построить по выручке")
+                    # Fallback на выручку
+                    query = self.session.query(
+                        Analysis.abc_category,
+                        func.sum(Analysis.revenue).label('total_revenue'),
+                        func.count(Analysis.id).label('count')
+                    ).filter(Analysis.abc_category.isnot(None)).group_by(Analysis.abc_category)
+                    results = query.all()
+                    categories = []
+                    values = []
+                    counts = []
+                    for cat, value, count in results:
+                        if not cat:
+                            continue
+                        if value is None:
+                            continue
+                        value = float(value)
+                        if not np.isfinite(value) or value < 0:
+                            continue
+                        categories.append(cat)
+                        values.append(value)
+                        counts.append(count)
+                    use_quantity_data = False
+
+                if sum(values) <= 0:
+                    print("⚠️ Сумма значений для ABC диаграммы равна 0")
+                    return None
             
             # Улучшенные цвета
             colors_dict = {
@@ -68,7 +242,7 @@ class ChartGenerator:
             for cat in order:
                 if cat in categories:
                     idx = categories.index(cat)
-                    sorted_data.append((cat, revenues[idx], counts[idx]))
+                    sorted_data.append((cat, values[idx], counts[idx]))
             
             if not sorted_data:
                 print("⚠️ Нет данных в стандартных категориях A, B, C")
@@ -83,12 +257,17 @@ class ChartGenerator:
             def autopct_format(pct):
                 total = sum(sorted_revenues)
                 value = pct * total / 100.0
+                if use_quantity_data:
+                    return f'{pct:.1f}%\n({value:,.0f} шт.)'
                 return f'{pct:.1f}%\n({value:,.0f})'
             
             # Создаем диаграмму
             wedges, texts, autotexts = ax.pie(
                 sorted_revenues,
-                labels=[f'{cat} ({count} шт.)' for cat, count in zip(sorted_categories, sorted_counts)],
+                labels=[
+                    f'{cat} ({value:,.0f} {"шт." if use_quantity_data else "у.е."})'
+                    for cat, value in zip(sorted_categories, sorted_revenues)
+                ],
                 colors=[colors_dict[cat] for cat in sorted_categories],
                 autopct=autopct_format,
                 startangle=90,
@@ -103,19 +282,27 @@ class ChartGenerator:
                 autotext.set_fontweight('bold')
                 autotext.set_fontsize(10)
             
-            ax.set_title('ABC Анализ: Распределение выручки', 
+            title_suffix = "количества (шт.)" if use_quantity_data else "выручки"
+            ax.set_title(f'ABC Анализ: Распределение {title_suffix}', 
                         fontsize=14, fontweight='bold', pad=20)
             
             # Добавляем легенду
+            legend_map = {
+                'A': 'A - Высокий приоритет',
+                'B': 'B - Средний приоритет',
+                'C': 'C - Низкий приоритет'
+            }
             legend_labels = [
-                f'A - Высокий приоритет ({sorted_revenues[0]:,.0f} у.е.)',
-                f'B - Средний приоритет ({sorted_revenues[1]:,.0f} у.е.)' if len(sorted_revenues) > 1 else '',
-                f'C - Низкий приоритет ({sorted_revenues[2]:,.0f} у.е.)' if len(sorted_revenues) > 2 else ''
+                f"{legend_map.get(cat, cat)} ({rev:,.0f} {'шт.' if use_quantity_data else 'у.е.'})"
+                for cat, rev in zip(sorted_categories, sorted_revenues)
             ]
-            ax.legend(wedges, [label for label in legend_labels if label],
-                     loc="center left",
-                     bbox_to_anchor=(1, 0, 0.5, 1),
-                     fontsize=10)
+            ax.legend(
+                wedges,
+                legend_labels,
+                loc="center left",
+                bbox_to_anchor=(1, 0, 0.5, 1),
+                fontsize=10
+            )
             
             plt.tight_layout()
             print("✅ ABC круговая диаграмма успешно создана")

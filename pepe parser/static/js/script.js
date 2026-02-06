@@ -17,6 +17,9 @@ let currentCharts = {};
 let currentAnalysisData = null;
 let chartRefreshInterval = null;
 let lastUpdateTime = null;
+// Временный переключатель: чтобы оставить только ABC график на странице,
+// поставьте true. Верните false, чтобы снова включить все графики.
+const SHOW_ONLY_ABC_CHART = true;
 
 // =============== ОБЩИЕ ФУНКЦИИ ===============
 function showNotification(message, type = 'info') {
@@ -289,14 +292,34 @@ function displayIndividualCharts(charts) {
     // ABC анализ
     const abcChartImg = document.getElementById('abcChart');
     if (abcChartImg && charts['abc_pie']) {
+        console.log('ABC график: длина base64:', charts['abc_pie'] ? charts['abc_pie'].length : 0);
         abcChartImg.src = `data:image/png;base64,${charts['abc_pie']}`;
         abcChartImg.alt = 'ABC анализ';
         abcChartImg.style.opacity = '0';
         abcChartImg.onclick = () => openFullscreenChart('abcChart', 'ABC Анализ');
+        abcChartImg.onerror = function() {
+            console.error('Ошибка загрузки ABC графика');
+            this.src = '';
+            this.parentElement.innerHTML = '<div style="color: #e74c3c; text-align: center; padding: 20px;">Ошибка загрузки ABC графика. Проверьте данные.</div>';
+        };
         setTimeout(() => {
             abcChartImg.style.opacity = '1';
             abcChartImg.style.transition = 'opacity 0.5s ease';
         }, 100);
+    }
+
+    // Временная блокировка остальных графиков (кроме ABC)
+    if (SHOW_ONLY_ABC_CHART) {
+        const xyzChartImg = document.getElementById('xyzChart');
+        const matrixChartImg = document.getElementById('matrixChart');
+        const topProductsChartImg = document.getElementById('topProductsChart');
+        const xyzCard = xyzChartImg ? xyzChartImg.closest('.chart-card') : null;
+        const matrixCard = matrixChartImg ? matrixChartImg.closest('.chart-card') : null;
+        const topProductsCard = topProductsChartImg ? topProductsChartImg.closest('.chart-card') : null;
+        if (xyzCard) xyzCard.style.display = 'none';
+        if (matrixCard) matrixCard.style.display = 'none';
+        if (topProductsCard) topProductsCard.style.display = 'none';
+        return;
     }
     
     // XYZ анализ

@@ -39,6 +39,7 @@ except ImportError as e:
     print(f"⚠️  AnalysisDBLoader не найден: {e}")
     ANALYSIS_DB_AVAILABLE = False
     AnalysisDBLoader = None
+analysis_db = None
 
 # =============== ДОПОЛНЕНИЯ ДЛЯ ГРАФИКОВ ===============
 try:
@@ -230,7 +231,7 @@ def upload_file():
         if DB_AVAILABLE and CHARTS_AVAILABLE:
             try:
                 session = db.get_session()
-                generator = ChartGenerator(session)
+                generator = ChartGenerator(session, analysis_db=analysis_db, analysis_data=analysis_data)
                 charts = generator.generate_all_charts()
                 session.close()
                 
@@ -529,7 +530,7 @@ def get_charts():
                 }
             }), 404
         
-        generator = ChartGenerator(session)
+        generator = ChartGenerator(session, analysis_db=analysis_db)
         charts = generator.generate_all_charts()
         
         session.close()
@@ -573,7 +574,7 @@ def get_specific_chart(chart_type):
     
     try:
         session = db.get_session()
-        generator = ChartGenerator(session)
+        generator = ChartGenerator(session, analysis_db=analysis_db)
         
         chart_map = {
             'abc_pie': generator.create_abc_pie_chart,
@@ -642,10 +643,10 @@ def get_basic_stats():
         
         # Топ 5 товаров
         top_products = session.query(
-            db.models.Analysis.product_name,
-            db.models.Analysis.revenue,
-            db.models.Analysis.abc_xyz_category
-        ).order_by(db.models.Analysis.revenue.desc()).limit(5).all()
+            Analysis.product_name,
+            Analysis.revenue,
+            Analysis.abc_xyz_category
+        ).order_by(Analysis.revenue.desc()).limit(5).all()
         
         session.close()
         
@@ -750,7 +751,7 @@ def test_charts():
             }), 404
         
         # Создаем тестовый график
-        generator = ChartGenerator(session)
+        generator = ChartGenerator(session, analysis_db=analysis_db)
         test_chart = generator.create_abc_pie_chart()
         
         session.close()
@@ -1038,7 +1039,7 @@ def auto_load_charts():
             }), 404
         
         # Генерируем графики
-        generator = ChartGenerator(session)
+        generator = ChartGenerator(session, analysis_db=analysis_db)
         charts = generator.generate_all_charts()
         session.close()
         
@@ -1129,7 +1130,7 @@ def debug_matrix_only():
     
     try:
         session = db.get_session()
-        generator = ChartGenerator(session)
+        generator = ChartGenerator(session, analysis_db=analysis_db)
         
         # Генерируем только матрицу
         matrix_chart = generator.create_abc_xyz_matrix()

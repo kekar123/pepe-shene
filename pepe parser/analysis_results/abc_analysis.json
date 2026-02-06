@@ -3,7 +3,7 @@
     "records_count": 29437,
     "products_count": 612,
     "total_quantity": 29990854.0,
-    "analysis_date": "2026-02-05 14:59:39",
+    "analysis_date": "2026-02-06 12:42:47",
     "source_file": "--_01.08.25_31.01.26_1.json",
     "quantity_column": "ШТУК_ЗАКАЗАНО",
     "name_column": "НАИМЕНОВАНИЕ"
@@ -4920,12 +4920,12 @@
     },
     "B": {
       "products_count": 103,
-      "quantity_share": 15.313245164675871,
+      "quantity_share": 15.313245164675877,
       "products_share": 16.830065359477125
     },
     "C": {
       "products_count": 473,
-      "quantity_share": 5.056661607568761,
+      "quantity_share": 5.0566616075687545,
       "products_share": 77.2875816993464
     }
   },
