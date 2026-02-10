@@ -1,4 +1,4 @@
-// Основные функции для работы с файлами
+﻿// Основные функции для работы с файлами
 const API_BASE_URL = 'http://localhost:5000';
 
 // DOM элементы
@@ -827,275 +827,7 @@ document.addEventListener('DOMContentLoaded', function() {
         checkExistingData();
     }, 1000);
     
-    // Инициализация чата
-    setTimeout(initializeChat, 100);
 });
-
-// =============== ЧАТ-БОТ ===============
-const botKnowledgeBase = {
-    'abc анализ': {
-        responses: [
-            "ABC анализ — это метод классификации товаров по степени их важности. Категория A (55% товаров, 80% оборота), B (30% товаров, 15% оборота), C (15% товаров, 5% оборота).",
-            "ABC анализ помогает выделить наиболее важные товары для оптимизации складских запасов и логистики.",
-            "Для проведения ABC анализа нужны данные: наименование товара, выручка или количество продаж за период."
-        ],
-        keywords: ['abc', 'анализ abc', 'категории', 'классификация']
-    },
-    
-    'xyz анализ': {
-        responses: [
-            "XYZ анализ оценивает стабильность спроса. X — стабильный спрос, Y — сезонные колебания, Z — нерегулярный спрос.",
-            "Комбинированный ABC-XYZ анализ дает полную картину: важность товара + предсказуемость спроса.",
-            "XYZ категория определяется по коэффициенту вариации продаж."
-        ],
-        keywords: ['xyz', 'анализ xyz', 'стабильность', 'спрос', 'вариация']
-    },
-    
-    'матрица': {
-        responses: [
-            "Матрица ABC-XYZ показывает комбинации категорий. Например, AX - высокоприоритетные стабильные товары, CZ - низкоприоритетные нерегулярные товары.",
-            "Матрица помогает определить стратегию управления: для AX товаров - максимальные запасы, для CZ - минимальные или работа под заказ.",
-            "Тепловая карта матрицы визуализирует среднюю выручку по каждой комбинации ABC-XYZ."
-        ],
-        keywords: ['матрица', 'abc-xyz', 'комбинации', 'тепловая карта']
-    },
-    
-    'логистика': {
-        responses: [
-            "Для категории A рекомендую размещение в золотой зоне (0.8-1.6 м от пола), страховой запас 30-40 дней, еженедельная инвентаризация.",
-            "Категория B: средняя зона склада, запас 15-20 дней, инвентаризация раз в 2 недели.",
-            "Категория C: удаленная зона, минимум запаса (7-10 дней) или работа под заказ, ежемесячная проверка."
-        ],
-        keywords: ['логистика', 'склад', 'размещение', 'запас', 'зона']
-    },
-    
-    'привет': {
-        responses: [
-            "Здравствуйте! Я аналитический помощник. Задавайте вопросы по ABC/XYZ анализу, логистике и оптимизации.",
-            "Привет! Готов помочь с анализом товарных категорий и рекомендациями по складскому хранению."
-        ],
-        keywords: ['привет', 'здравствуй', 'добрый день', 'здравствуйте', 'hello', 'hi']
-    },
-    
-    'помощь': {
-        responses: [
-            "Я могу помочь с: 1) ABC анализом 2) XYZ анализом 3) Матрицей ABC-XYZ 4) Логистическими рекомендациями 5) Интерпретацией результатов",
-            "Задавайте вопросы про: категории товаров, размещение на складе, страховые запасы, анализ эффективности, матрицу ABC-XYZ."
-        ],
-        keywords: ['помощь', 'help', 'что ты умееш', 'возможности', 'функции']
-    },
-    
-    'файл': {
-        responses: [
-            "Для анализа загрузите Excel файл со столбцами: 'Наименование товара', 'Выручка (У.Е.)' и данные по кварталам.",
-            "Формат файла: .xlsx или .csv. Обязательные поля: название товара и финансовые показатели."
-        ],
-        keywords: ['файл', 'excel', 'загрузить', 'формат', 'данные', 'выручка']
-    },
-    
-    'график': {
-        responses: [
-            "Графики строятся автоматически после загрузки файла. Доступны: ABC анализ, XYZ анализ, матрица ABC-XYZ и топ товаров.",
-            "Кликните на график для увеличения. Пробел - зум, +/- - масштаб, Esc - закрыть."
-        ],
-        keywords: ['график', 'диаграмма', 'визуализация', 'картинка', 'матрица']
-    },
-    
-    'статистика': {
-        responses: [
-            "Статистика обновляется автоматически. Показывает: общее количество товаров, выручку, распределение по категориям.",
-            "Под каждым графиком отображается соответствующая статистика для лучшего понимания данных."
-        ],
-        keywords: ['статистика', 'данные', 'числа', 'показатели']
-    }
-};
-
-let chatHistory = [];
-
-function toggleChat() {
-    const chatWindow = document.getElementById('chatWindow');
-    const isOpening = !chatWindow.classList.contains('active');
-    
-    chatWindow.classList.toggle('active');
-    
-    if (isOpening) {
-        setTimeout(() => {
-            document.getElementById('chatInput').focus();
-        }, 300);
-    }
-}
-
-function sendMessage() {
-    const input = document.getElementById('chatInput');
-    const userMessage = input.value.trim();
-    
-    if (!userMessage) return;
-    
-    addMessageToChat(userMessage, 'user');
-    input.value = '';
-    
-    chatHistory.push({
-        text: userMessage,
-        sender: 'user',
-        timestamp: new Date()
-    });
-    
-    showTypingIndicator();
-    
-    setTimeout(() => {
-        hideTypingIndicator();
-        const botResponse = generateBotResponse(userMessage);
-        addMessageToChat(botResponse, 'bot');
-        
-        chatHistory.push({
-            text: botResponse,
-            sender: 'bot',
-            timestamp: new Date()
-        });
-        
-        scrollToBottom();
-    }, 1000 + Math.random() * 1000);
-}
-
-function generateBotResponse(userMessage) {
-    const message = userMessage.toLowerCase();
-    
-    // Проверяем точные совпадения
-    for (const [category, data] of Object.entries(botKnowledgeBase)) {
-        for (const keyword of data.keywords) {
-            if (message.includes(keyword)) {
-                const responses = data.responses;
-                return responses[Math.floor(Math.random() * responses.length)];
-            }
-        }
-    }
-    
-    // Проверяем частичные совпадения
-    const matchedCategories = [];
-    for (const [category, data] of Object.entries(botKnowledgeBase)) {
-        for (const keyword of data.keywords) {
-            if (message.includes(keyword)) {
-                matchedCategories.push(category);
-                break;
-            }
-        }
-    }
-    
-    if (matchedCategories.length > 0) {
-        const randomCategory = matchedCategories[Math.floor(Math.random() * matchedCategories.length)];
-        const responses = botKnowledgeBase[randomCategory].responses;
-        return responses[Math.floor(Math.random() * responses.length)];
-    }
-    
-    const defaultResponses = [
-        "Понял ваш вопрос. Могу уточнить: интересует ли вас ABC анализ, XYZ анализ, матрица ABC-XYZ или логистические рекомендации?",
-        "Для более точного ответа уточните, пожалуйста, ваш вопрос. Например: 'Как провести ABC анализ?' или 'Какие рекомендации для категории A?'",
-        "Загрузите данные в формат Excel для проведения полного анализа. Нужны столбцы: наименование товара и выручка.",
-        "Рекомендую посмотреть раздел с рекомендациями по логистике для разных категорий товаров."
-    ];
-    
-    return defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
-}
-
-function addMessageToChat(text, sender) {
-    const messagesContainer = document.getElementById('chatMessages');
-    const messageDiv = document.createElement('div');
-    
-    messageDiv.className = `message ${sender}-message`;
-    messageDiv.innerHTML = `
-        <div class="message-content">${escapeHtml(text)}</div>
-        <div class="message-time">${getCurrentTime()}</div>
-    `;
-    
-    messagesContainer.appendChild(messageDiv);
-    scrollToBottom();
-}
-
-function showTypingIndicator() {
-    const messagesContainer = document.getElementById('chatMessages');
-    const typingDiv = document.createElement('div');
-    typingDiv.id = 'typingIndicator';
-    typingDiv.className = 'message bot-message typing-indicator';
-    typingDiv.innerHTML = `
-        <div class="typing-dots">
-            <span></span>
-            <span></span>
-            <span></span>
-        </div>
-    `;
-    
-    messagesContainer.appendChild(typingDiv);
-    scrollToBottom();
-}
-
-function hideTypingIndicator() {
-    const typingIndicator = document.getElementById('typingIndicator');
-    if (typingIndicator) {
-        typingIndicator.remove();
-    }
-}
-
-function scrollToBottom() {
-    const messagesContainer = document.getElementById('chatMessages');
-    if (messagesContainer) {
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    }
-}
-
-function getCurrentTime() {
-    const now = new Date();
-    return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-}
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-function handleKeyPress(event) {
-    if (event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault();
-        sendMessage();
-    }
-}
-
-function addQuickReply(text) {
-    const input = document.getElementById('chatInput');
-    input.value = text;
-    input.focus();
-}
-
-function clearChatHistory() {
-    const messagesContainer = document.getElementById('chatMessages');
-    if (!messagesContainer) return;
-    
-    const welcomeMessage = messagesContainer.querySelector('.welcome-message');
-    messagesContainer.innerHTML = '';
-    if (welcomeMessage) {
-        messagesContainer.appendChild(welcomeMessage);
-    }
-    
-    chatHistory = [];
-    
-    addMessageToChat('История диалога очищена. Чем еще могу помочь?', 'bot');
-}
-
-function initializeChat() {
-    const messagesContainer = document.getElementById('chatMessages');
-    if (messagesContainer) {
-        // Очищаем контейнер перед добавлением приветственного сообщения
-        messagesContainer.innerHTML = '';
-        
-        const welcomeDiv = document.createElement('div');
-        welcomeDiv.className = 'welcome-message';
-        welcomeDiv.innerHTML = `
-            <p>Здравствуйте! Можете задать любой интересующий Вас вопрос по анализу и я постараюсь Вам помочь!</p>
-        `;
-        
-        messagesContainer.appendChild(welcomeDiv);
-    }
-}
 
 // =============== ПАНЕЛЬ ИНФОРМАЦИИ ===============
 function toggleInfoPanel() {
@@ -1119,11 +851,6 @@ function updateInfoPanelContent() {
 }
 
 // =============== ЭКСПОРТ ФУНКЦИЙ ДЛЯ ГЛОБАЛЬНОГО ДОСТУПА ===============
-window.toggleChat = toggleChat;
-window.sendMessage = sendMessage;
-window.handleKeyPress = handleKeyPress;
-window.clearChatHistory = clearChatHistory;
-window.addQuickReply = addQuickReply;
 window.autoLoadCharts = autoLoadCharts;
 window.stopAutoRefresh = stopAutoRefresh;
 window.startAutoRefresh = startAutoRefresh;
@@ -1131,42 +858,24 @@ window.refreshCharts = refreshCharts;
 window.toggleInfoPanel = toggleInfoPanel;
 window.checkExistingData = checkExistingData;
 
-// Обработчики событий для панели информации и чат-бота
+// Обработчики событий для панели информации
 document.addEventListener('click', function(event) {
     const infoPanel = document.getElementById('infoPanel');
     const infoToggleBtn = document.querySelector('.info-toggle-btn');
-    const chatWindow = document.getElementById('chatWindow');
-    const chatBtn = document.querySelector('.chat-bot-btn');
     const closeBtn = document.querySelector('.close-btn');
     
     if (infoPanel && infoPanel.classList.contains('active')) {
         if (event.target === closeBtn || 
             (!infoPanel.contains(event.target) && 
-             !infoToggleBtn.contains(event.target) &&
-             !chatWindow.contains(event.target) &&
-             !chatBtn.contains(event.target))) {
+             !infoToggleBtn.contains(event.target))) {
             toggleInfoPanel();
         }
-    }
-    
-    // Закрытие чата
-    if (chatWindow && chatWindow.classList.contains('active') && 
-        !chatWindow.contains(event.target) && 
-        !chatBtn.contains(event.target) &&
-        !infoPanel.contains(event.target) &&
-        !infoToggleBtn.contains(event.target)) {
-        toggleChat();
     }
 });
 
 // Закрытие по Escape
 document.addEventListener('keydown', function(event) {
     if (event.key === 'Escape') {
-        const chatWindow = document.getElementById('chatWindow');
-        if (chatWindow && chatWindow.classList.contains('active')) {
-            toggleChat();
-        }
-        
         const infoPanel = document.getElementById('infoPanel');
         if (infoPanel && infoPanel.classList.contains('active')) {
             toggleInfoPanel();
@@ -1880,3 +1589,5 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }, 1000);
 });
+
+

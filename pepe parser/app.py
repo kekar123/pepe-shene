@@ -8,7 +8,7 @@ from pathlib import Path
 from excel_parser import xls_to_json_single
 from analyzer import perform_abc_xyz_analysis
 import pandas as pd
-from sqlalchemy import func
+from sqlalchemy import func, or_
 
 # =============== ДОПОЛНЕНИЯ ДЛЯ БАЗЫ ДАННЫХ ===============
 import sys
@@ -97,6 +97,10 @@ def allowed_file(filename):
 def index():
     """Главная страница с формой"""
     return render_template('form4.html')
+
+@app.route('/remove')
+def remove_page():
+    return render_template('remove.html')
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -305,6 +309,147 @@ def upload_file():
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/delete-by-file', methods=['POST'])
+def delete_by_file():
+    """РЈРґР°Р»РµРЅРёРµ РґР°РЅРЅС‹С… РёР· Р‘Р” РїРѕ Excel С„Р°Р№Р»Сѓ"""
+    if not DB_AVAILABLE:
+        return jsonify({'success': False, 'error': 'Р‘Р°Р·Р° РґР°РЅРЅС‹С… РЅРµ РґРѕСЃС‚СѓРїРЅР°'}), 500
+
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'error': 'Р¤Р°Р№Р» РЅРµ РЅР°Р№РґРµРЅ РІ Р·Р°РїСЂРѕСЃРµ'}), 400
+
+    file = request.files['file']
+
+    if file.filename == '':
+        return jsonify({'success': False, 'error': 'Р¤Р°Р№Р» РЅРµ РІС‹Р±СЂР°РЅ'}), 400
+
+    if not allowed_file(file.filename):
+        return jsonify({'success': False, 'error': 'Р Р°Р·СЂРµС€РµРЅС‹ С‚РѕР»СЊРєРѕ С„Р°Р№Р»С‹ Excel (.xls, .xlsx)'}), 400
+
+    import tempfile
+    temp_path = None
+    try:
+        suffix = Path(file.filename).suffix or '.xlsx'
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
+            temp_path = temp_file.name
+            file.save(temp_path)
+
+        df = pd.read_excel(temp_path)
+    except Exception as e:
+        if temp_path and os.path.exists(temp_path):
+            os.unlink(temp_path)
+        return jsonify({'success': False, 'error': f'РћС€РёР±РєР° С‡С‚РµРЅРёСЏ Excel: {str(e)}'}), 500
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            os.unlink(temp_path)
+
+    if df is None or df.empty:
+        return jsonify({'success': False, 'error': 'Р¤Р°Р№Р» РїСѓСЃС‚РѕР№ РёР»Рё РЅРµ СЃРѕРґРµСЂР¶РёС‚ РґР°РЅРЅС‹С…'}), 400
+
+    def normalize_name(value):
+        if pd.isna(value):
+            return None
+        name = str(value).strip()
+        return name if name else None
+
+    def parse_id(value):
+        if pd.isna(value):
+            return None
+        try:
+            return int(float(value))
+        except (ValueError, TypeError):
+            return None
+
+    columns = [str(col) for col in df.columns]
+    lower_columns = [col.lower() for col in columns]
+
+    name_patterns = ['наимен', 'name', 'product']
+    id_patterns = ['id', 'артикул', 'sku', 'article', 'код', 'product_id']
+
+    name_columns = [columns[i] for i, col in enumerate(lower_columns) if any(p in col for p in name_patterns)]
+    id_columns = [columns[i] for i, col in enumerate(lower_columns) if any(p in col for p in id_patterns)]
+
+    names = set()
+    ids = set()
+
+    for col in id_columns:
+        for value in df[col].tolist():
+            parsed = parse_id(value)
+            if parsed is not None:
+                ids.add(parsed)
+
+    for col in name_columns:
+        for value in df[col].tolist():
+            normalized = normalize_name(value)
+            if normalized:
+                names.add(normalized)
+
+    if not names and not ids:
+        return jsonify({
+            'success': False,
+            'error': 'Не удалось определить столбцы с ID или наименованием товара',
+            'columns': columns
+        }), 400
+
+    session = db.get_session()
+    try:
+        from db.models import Store, Analysis
+
+        existing_ids = set()
+        existing_names = set()
+
+        if ids:
+            existing_ids = {row[0] for row in session.query(Store.id).filter(Store.id.in_(ids)).all()}
+
+        if names:
+            existing_names = {row[0] for row in session.query(Store.product_name).filter(Store.product_name.in_(names)).all()}
+
+        missing_ids = sorted(ids - existing_ids)
+        missing_names = sorted(names - existing_names)
+
+        analysis_filters = []
+        store_filters = []
+
+        if existing_ids:
+            analysis_filters.append(Analysis.store_id.in_(existing_ids))
+            store_filters.append(Store.id.in_(existing_ids))
+
+        if existing_names:
+            analysis_filters.append(Analysis.product_name.in_(existing_names))
+            store_filters.append(Store.product_name.in_(existing_names))
+
+        deleted_analysis = 0
+        deleted_store = 0
+
+        if analysis_filters:
+            deleted_analysis = session.query(Analysis).filter(or_(*analysis_filters)).delete(synchronize_session=False)
+
+        if store_filters:
+            deleted_store = session.query(Store).filter(or_(*store_filters)).delete(synchronize_session=False)
+
+        session.commit()
+
+        return jsonify({
+            'success': True,
+            'deleted': {
+                'analysis': deleted_analysis,
+                'store': deleted_store
+            },
+            'requested': {
+                'ids': len(ids),
+                'names': len(names)
+            },
+            'missing': {
+                'ids': missing_ids,
+                'names': missing_names
+            }
+        })
+    except Exception as e:
+        session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        session.close()
 
 @app.route('/reorder-warehouse', methods=['POST'])
 def reorder_warehouse():

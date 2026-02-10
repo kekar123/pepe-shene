@@ -13,8 +13,8 @@
     <div class="header-inner">
         <a class="penis" href="#"><h1>PENIS MUSIC</h1></a>
         <nav class="header-links">
-            <a href="#" style="background-color: #3d4170; border-radius: 15px; padding: 10px 15px;">Поставка</a>
-            <a href="#">Отгрузка</a>
+            <a href="{{ url_for('index') }}" style="background-color: #3d4170; border-radius: 15px; padding: 10px 15px;">Поставка</a>
+            <a href="{{ url_for('remove_page') }}">Отгрузка</a>
             <a href="#">Склад</a>
             <a href="#">Этикетки</a>
         </nav>
@@ -35,10 +35,10 @@
     <!-- Upload -->
     <div class="container">
         <div class="upload-section">
-            <div class="upload-title">Загрузите Excel файл для анализа</div>
+            <div class="upload-title">Загрузите Excel файл для погрузки</div>
             
             <div class="tabs">
-                <div class="tab active" data-tab="upload">ABC/XYZ Анализ</div>
+                <div class="tab active" data-tab="upload">Погрузка</div>
             </div>
             
             <div class="tab-content active" id="upload">
@@ -62,7 +62,7 @@
 <!-- Table -->
 <section class="results-section">
     <main class="result-container">
-        <h2>Результаты анализа</h2>
+        <h2>Результаты погрузки</h2>
         
         <div class="table-container">
             <div class="table-tabs">
@@ -291,5 +291,6 @@
 </div>
 
 <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+<script src="{{ url_for('static', filename='js/chatbot.js') }}"></script>
 </body>
 </html>
