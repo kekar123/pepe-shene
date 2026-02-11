@@ -1,5 +1,9 @@
 ﻿// Основные функции для работы с файлами
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = (() => {
+    const origin = window.location.origin;
+    if (origin && origin !== 'null') return origin;
+    return 'http://localhost:5000';
+})();
 
 // DOM элементы
 const dropArea = document.getElementById('dropArea');
@@ -600,7 +604,7 @@ async function loadAnalysisDataFromAPI() {
     try {
         showNotification('Загрузка данных анализа из базы данных...', 'info');
         
-        const response = await fetch(`${API_BASE_URL}/api/analysis-data`);
+        const response = await fetch(`${API_BASE_URL}/api/analysis-data?limit=1000`);
         const result = await response.json();
         
         if (result.success) {
@@ -609,13 +613,11 @@ async function loadAnalysisDataFromAPI() {
             
             showNotification('Данные анализа успешно загружены!', 'success');
         } else {
-            // Пробуем загрузить из файла как резервный вариант
-            await loadAnalysisDataFromFile();
+            displayAnalysisTable([]);
         }
     } catch (error) {
         console.error('Ошибка загрузки анализа из API:', error);
-        // Пробуем загрузить из файла как резервный вариант
-        await loadAnalysisDataFromFile();
+        displayAnalysisTable([]);
     }
 }
 
@@ -647,13 +649,6 @@ function displayAnalysisTable(data) {
     tableBody.innerHTML = '';
     
     if (!data || data.length === 0) {
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="6" style="text-align: center; padding: 40px;">
-                    Нет данных для отображения
-                </td>
-            </tr>
-        `;
         return;
     }
     
@@ -665,16 +660,21 @@ function displayAnalysisTable(data) {
         row.style.opacity = '0';
         row.style.animation = 'fadeIn 0.5s ease forwards';
         
+        const productName = item.name || item.product_name || item.productName || '';
+        const revenue = item.revenue ?? item.total_revenue ?? 0;
+        const abcCategory = item.ABC || item.abc_category || item.abcCategory || '';
+        const xyzCategory = item.XYZ || item.xyz_category || item.xyzCategory || '';
+        const abcXyzCategory = item.ABC_XYZ || item.abc_xyz_category || item.abcXyzCategory || '';
+
         // Определяем класс категории для цвета
-        const abcClass = item.ABC ? `category-${item.ABC.toLowerCase()}` : '';
+        const abcClass = abcCategory ? `category-${abcCategory.toLowerCase()}` : '';
         
         row.innerHTML = `
-            <td>${item.id || index + 1}</td>
-            <td>${item.name || item.product_name || ''}</td>
-            <td>${item.revenue ? item.revenue.toLocaleString() : 0}</td>
-            <td><span class="${abcClass}">${item.ABC || ''}</span></td>
-            <td>${item.XYZ || ''}</td>
-            <td>${item.ABC_XYZ || ''}</td>
+            <td>${item.rank ?? (index + 1)}</td>
+            <td>${productName}</td>
+            <td><span class="${abcClass}">${abcCategory}</span></td>
+            <td>${xyzCategory}</td>
+            <td>${abcXyzCategory}</td>
         `;
         tableBody.appendChild(row);
     });
@@ -763,13 +763,9 @@ async function checkExistingData() {
             showNotification(`Загружено ${data.count} записей из базы данных`, 'success');
         } else {
             console.log('В базе данных нет записей');
-            // Проверяем наличие файлов анализа
-            await checkAnalysisFiles();
         }
     } catch (error) {
         console.error('Ошибка проверки данных:', error);
-        // Проверяем наличие файлов анализа
-        await checkAnalysisFiles();
     }
 }
 

@@ -8,12 +8,13 @@ from datetime import datetime
 from typing import Dict, List, Any, Optional
 import logging
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
 
 class AnalysisDBLoader:
     def __init__(self, db_path: str = "analysis_visualization.db"):
         self.db_path = db_path
+        self._products_columns = None
         self.init_database()
     
     def init_database(self):
@@ -189,6 +190,13 @@ class AnalysisDBLoader:
                     analysis_data = analysis_data["results"]
                 elif "data" in analysis_data and isinstance(analysis_data["data"], list):
                     analysis_data = analysis_data["data"]
+                elif "matrix" in analysis_data and isinstance(analysis_data["matrix"], dict):
+                    # Анализы из текущего пайплайна лежат в matrix -> flatten
+                    matrix_items = []
+                    for _, items in analysis_data["matrix"].items():
+                        if isinstance(items, list):
+                            matrix_items.extend(items)
+                    analysis_data = matrix_items
 
             if not isinstance(analysis_data, list):
                 results["errors"].append("РќРµРїСЂР°РІРёР»СЊРЅС‹Р№ С„РѕСЂРјР°С‚ РґР°РЅРЅС‹С…. РћР¶РёРґР°РµС‚СЃСЏ СЃРїРёСЃРѕРє.")
@@ -204,8 +212,11 @@ class AnalysisDBLoader:
             
             results["analysis_file_id"] = analysis_id
             
+            # Создаем сессию анализа (если таблица существует)
+            analysis_session_id = self._create_analysis_session(filename, len(analysis_data))
+
             # РћР±СЂР°Р±Р°С‚С‹РІР°РµРј РґР°РЅРЅС‹Рµ
-            return self._process_analysis_data(analysis_id, analysis_data, results)
+            return self._process_analysis_data(analysis_id, analysis_data, results, analysis_session_id)
                 
         except Exception as e:
             logger.error(f"вќЊ РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё Р°РЅР°Р»РёР·Р°: {e}")
@@ -232,8 +243,42 @@ class AnalysisDBLoader:
         except Exception as e:
             logger.error(f"РћС€РёР±РєР° СЃРѕР·РґР°РЅРёСЏ Р·Р°РїРёСЃРё Рѕ С„Р°Р№Р»Рµ: {e}")
             return None
+
+    def _create_analysis_session(self, filename: str, total_products: int) -> Optional[int]:
+        """РЎРѕР·РґР°РµС‚ Р·Р°РїРёСЃСЊ СЃРµСЃСЃРёРё Р°РЅР°Р»РёР·Р° (РµСЃР»Рё С‚Р°Р±Р»РёС†Р° СѓС‰РµСЃС‚РІСѓРµС‚)"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name='analysis_sessions'"
+                )
+                if not cursor.fetchone():
+                    return None
+
+                cursor.execute(
+                    '''
+                    INSERT INTO analysis_sessions (excel_filename, json_filename, analysis_filename, total_products)
+                    VALUES (?, ?, ?, ?)
+                    ''',
+                    (filename, filename, filename, total_products)
+                )
+                session_id = cursor.lastrowid
+                conn.commit()
+                return session_id
+        except Exception as e:
+            logger.error(f"РћС€РёР±РєР° СЃРѕР·РґР°РЅРёСЏ СЃРµСЃСЃРёРё Р°РЅР°Р»РёР·Р°: {e}")
+            return None
+
+    def _load_products_columns(self, cursor):
+        if self._products_columns is not None:
+            return
+        try:
+            cursor.execute("PRAGMA table_info(products)")
+            self._products_columns = [row[1] for row in cursor.fetchall()]
+        except Exception:
+            self._products_columns = []
     
-    def _process_analysis_data(self, analysis_id: int, data: List[Dict], results: Dict) -> Dict:
+    def _process_analysis_data(self, analysis_id: int, data: List[Dict], results: Dict, analysis_session_id: Optional[int] = None) -> Dict:
         """РћР±СЂР°Р±Р°С‚С‹РІР°РµС‚ РґР°РЅРЅС‹Рµ Р°РЅР°Р»РёР·Р°"""
         try:
             with sqlite3.connect(self.db_path) as conn:
@@ -269,7 +314,18 @@ class AnalysisDBLoader:
                         abc_xyz_category = abc_xyz_category.upper()[:2]
                         
                         # РџРѕР»СѓС‡Р°РµРј РёР»Рё СЃРѕР·РґР°РµРј РїСЂРѕРґСѓРєС‚
-                        product_id = self._get_or_create_product(cursor, product_code, product_name)
+                        product_id = self._get_or_create_product(
+                            cursor,
+                            product_code,
+                            product_name,
+                            analysis_session_id=analysis_session_id,
+                            quantity=quantity,
+                            revenue=revenue,
+                            abc_category=abc_category,
+                            xyz_category=xyz_category,
+                            abc_xyz_category=abc_xyz_category,
+                            rank=idx + 1
+                        )
                         
                         if product_id:
                             results["products_loaded"] += 1
@@ -388,27 +444,82 @@ class AnalysisDBLoader:
             results["errors"].append(str(e))
             return results
     
-    def _get_or_create_product(self, cursor, product_code: str, product_name: str) -> Optional[int]:
+    def _get_or_create_product(
+        self,
+        cursor,
+        product_code: str,
+        product_name: str,
+        analysis_session_id: Optional[int] = None,
+        quantity: float = 0,
+        revenue: float = 0,
+        abc_category: str = None,
+        xyz_category: str = None,
+        abc_xyz_category: str = None,
+        rank: Optional[int] = None,
+    ) -> Optional[int]:
         """РџРѕР»СѓС‡Р°РµС‚ РёР»Рё СЃРѕР·РґР°РµС‚ РїСЂРѕРґСѓРєС‚"""
         try:
+            self._load_products_columns(cursor)
+            has_session = "analysis_session_id" in (self._products_columns or [])
+            if has_session and analysis_session_id is None:
+                analysis_session_id = self._create_analysis_session("unknown_session", 0)
+
             # РџСЂРѕР±СѓРµРј РЅР°Р№С‚Рё РїРѕ РёРјРµРЅРё
-            cursor.execute(
-                "SELECT id FROM products WHERE product_name = ?", 
-                (product_name,)
-            )
+            if has_session:
+                cursor.execute(
+                    "SELECT id FROM products WHERE product_name = ? AND analysis_session_id = ?",
+                    (product_name, analysis_session_id)
+                )
+            else:
+                cursor.execute(
+                    "SELECT id FROM products WHERE product_name = ?",
+                    (product_name,)
+                )
             result = cursor.fetchone()
             if result:
                 return result[0]
-            
+
             # РЎРѕР·РґР°РµРј РЅРѕРІС‹Р№ РїСЂРѕРґСѓРєС‚
-            cursor.execute('''
-            INSERT INTO products 
-            (product_code, product_name)
-            VALUES (?, ?)
-            ''', (product_code, product_name))
-            
+            columns = []
+            values = []
+
+            if has_session:
+                columns.append("analysis_session_id")
+                values.append(analysis_session_id)
+            if "product_name" in (self._products_columns or []):
+                columns.append("product_name")
+                values.append(product_name)
+            if "product_code" in (self._products_columns or []):
+                columns.append("product_code")
+                values.append(product_code)
+            if "quantity" in (self._products_columns or []):
+                columns.append("quantity")
+                values.append(quantity)
+            if "revenue" in (self._products_columns or []):
+                columns.append("revenue")
+                values.append(revenue)
+            if "abc_category" in (self._products_columns or []):
+                columns.append("abc_category")
+                values.append(abc_category)
+            if "xyz_category" in (self._products_columns or []):
+                columns.append("xyz_category")
+                values.append(xyz_category)
+            if "abc_xyz_category" in (self._products_columns or []):
+                columns.append("abc_xyz_category")
+                values.append(abc_xyz_category)
+            if "rank" in (self._products_columns or []):
+                columns.append("rank")
+                values.append(rank)
+
+            placeholders = ", ".join(["?"] * len(values))
+            columns_sql = ", ".join(columns)
+            cursor.execute(
+                f"INSERT INTO products ({columns_sql}) VALUES ({placeholders})",
+                values
+            )
+
             return cursor.lastrowid
-            
+
         except Exception as e:
             logger.error(f"РћС€РёР±РєР° СЃРѕР·РґР°РЅРёСЏ РїСЂРѕРґСѓРєС‚Р° {product_name}: {e}")
             return None

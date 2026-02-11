@@ -11,7 +11,7 @@
 <!-- HEADER -->
 <header class="header">
     <div class="header-inner">
-        <a class="penis" href="#"><h1>PENIS MUSIC</h1></a>
+        <a class="penis" href="#"><h1>SKLAD</h1></a>
         <nav class="header-links">
             <a href="{{ url_for('index') }}" style="background-color: #3d4170; border-radius: 15px; padding: 10px 15px;">Поставка</a>
             <a href="{{ url_for('remove_page') }}">Отгрузка</a>
@@ -75,19 +75,12 @@
                         <tr>
                             <th>ID</th>
                             <th>Наименование товара</th>
-                            <th>Выручка (У.Е.)</th>
                             <th>ABC категория</th>
                             <th>XYZ категория</th>
                             <th>ABC-XYZ матрица</th>
                         </tr>
                     </thead>
-                    <tbody id="tableBody">
-                        <tr>
-                            <td colspan="6" style="text-align: center; padding: 40px;">
-                                Загрузите Excel файл для отображения результатов анализа
-                            </td>
-                        </tr>
-                    </tbody>
+                    <tbody id="tableBody"></tbody>
                 </table>
             </div>
         </div>
@@ -294,3 +287,4 @@
 <script src="{{ url_for('static', filename='js/chatbot.js') }}"></script>
 </body>
 </html>
+

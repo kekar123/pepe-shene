@@ -1,4 +1,8 @@
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = (() => {
+    const origin = window.location.origin;
+    if (origin && origin !== 'null') return origin;
+    return 'http://localhost:5000';
+})();
 
 const dropArea = document.getElementById('deleteDropArea');
 const fileInput = document.getElementById('deleteFileInput');
@@ -7,6 +11,7 @@ const notificationText = document.getElementById('notification-text');
 const progressFill = document.getElementById('progress-fill');
 const deleteSummary = document.getElementById('deleteSummary');
 const missingTableBody = document.getElementById('missingTableBody');
+const tableBody = document.getElementById('tableBody');
 
 function showNotification(message, type = 'info') {
     if (!notification || !notificationText) return;
@@ -117,6 +122,7 @@ async function deleteByFile(formData) {
             updateProgress(100);
             renderSummary(result);
             renderMissing(result.missing);
+            await loadAnalysisData();
             showNotification('Данные успешно удалены из БД', 'success');
         } else {
             showNotification(result.error || 'Ошибка при удалении данных', 'error');
@@ -127,6 +133,55 @@ async function deleteByFile(formData) {
         showNotification('Ошибка соединения с сервером', 'error');
         updateProgress(0);
     }
+}
+
+async function loadAnalysisData() {
+    if (!tableBody) return;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/analysis-data?limit=1000`);
+        const result = await response.json();
+
+        if (result.success) {
+            renderAnalysisTable(result.data || []);
+        } else {
+            renderAnalysisTable([]);
+        }
+    } catch (error) {
+        console.error('РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё Р°РЅР°Р»РёР·Р°:', error);
+        renderAnalysisTable([]);
+    }
+}
+
+function renderAnalysisTable(data) {
+    if (!tableBody) return;
+
+    tableBody.innerHTML = '';
+
+    if (!data || data.length === 0) {
+        return;
+    }
+
+    data.forEach((item, index) => {
+        const row = document.createElement('tr');
+
+        const productName = item.name || item.product_name || item.productName || '';
+        const revenue = item.revenue ?? item.total_revenue ?? 0;
+        const abcCategory = item.ABC || item.abc_category || item.abcCategory || '';
+        const xyzCategory = item.XYZ || item.xyz_category || item.xyzCategory || '';
+        const abcXyzCategory = item.ABC_XYZ || item.abc_xyz_category || item.abcXyzCategory || '';
+        const abcClass = abcCategory ? `category-${abcCategory.toLowerCase()}` : '';
+
+        row.innerHTML = `
+            <td>${item.rank ?? (index + 1)}</td>
+            <td>${productName}</td>
+            <td><span class="${abcClass}">${abcCategory}</span></td>
+            <td>${xyzCategory}</td>
+            <td>${abcXyzCategory}</td>
+        `;
+
+        tableBody.appendChild(row);
+    });
 }
 
 function renderSummary(result) {
@@ -191,6 +246,7 @@ function renderMissing(missing) {
 document.addEventListener('DOMContentLoaded', function() {
     setupDragAndDrop();
     setupFileInput();
+    loadAnalysisData();
 });
 
 window.hideNotification = hideNotification;

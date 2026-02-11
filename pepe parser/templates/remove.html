@@ -11,7 +11,7 @@
 <!-- HEADER -->
 <header class="header">
     <div class="header-inner">
-        <a class="penis" href="#"><h1>PENIS MUSIC</h1></a>
+        <a class="penis" href="#"><h1>SKLAD</h1></a>
         <nav class="header-links">
             <a href="{{ url_for('index') }}">Поставка</a>
             <a href="{{ url_for('remove_page') }}" style="background-color: #3d4170; border-radius: 15px; padding: 10px 15px;">Отгрузка</a>
@@ -67,6 +67,27 @@
 
         <div class="table-container" style="margin-top: 20px;">
             <div class="table-tabs">
+                <div class="table-tab active">ABC/XYZ анализ</div>
+            </div>
+
+            <div class="table-wrapper">
+                <table id="analysisTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Наименование товара</th>
+                            <th>ABC категория</th>
+                            <th>XYZ категория</th>
+                            <th>ABC-XYZ матрица</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="table-container" style="margin-top: 20px;">
+            <div class="table-tabs">
                 <div class="table-tab active">Не найдено в БД</div>
             </div>
 
@@ -107,22 +128,20 @@
     </div>
     
     <div class="chat-body">
-        
         <div class="chat-messages" id="chatMessages">
             <!-- Сообщения будут добавляться здесь -->
         </div>
     </div>
     
     <div class="chat-input-area">
-        <input type="text" 
-               class="chat-input" 
-               id="chatInput" 
+        <input type="text"
+               class="chat-input"
+               id="chatInput"
                placeholder="Введите сообщение..."
                onkeypress="handleKeyPress(event)">
         <button class="send-btn" onclick="sendMessage()">Отправить</button>
     </div>
 </div>
-
 
 <!-- FOOTER -->
 <footer class="footer">
