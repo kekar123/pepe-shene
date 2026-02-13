@@ -1,0 +1,1692 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LabelFlow AI - Предпросмотр этикеток</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --surface: #ffffff;
+            --surface-alt: #f8fafc;
+            --border: #e2e8f0;
+            --text: #0f172a;
+            --text-light: #64748b;
+            --radius: 12px;
+            --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--surface-alt);
+            color: var(--text);
+            line-height: 1.5;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            height: calc(100vh - 60px);
+            padding: 20px;
+            gap: 20px;
+            max-width: 100%;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+
+        .input-panel {
+            flex: 0 0 380px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .panel-header h2 {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .badge {
+            background: var(--primary);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .input-container {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .input-header {
+            margin-bottom: 16px;
+        }
+
+        .input-header h3 {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-light);
+            margin-bottom: 8px;
+        }
+
+        #ai-input {
+            width: 100%;
+            min-height: 180px;
+            padding: 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--surface);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: none;
+            margin-bottom: 16px;
+            transition: border-color 0.2s;
+        }
+
+        #ai-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .input-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .attach-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-light);
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .attach-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .generate-btn {
+            flex: 1;
+            padding: 12px 24px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .generate-btn:hover {
+            background: var(--primary-dark);
+        }
+
+        .history-templates {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .history-templates h4 {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-light);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .template-item {
+            padding: 12px 16px;
+            background: var(--surface-alt);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 10px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .template-item:hover {
+            border-color: var(--primary);
+            background: white;
+            transform: translateX(2px);
+        }
+
+        .template-product {
+            font-weight: 500;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+
+        .template-size {
+            font-size: 11px;
+            color: var(--primary);
+            background: rgba(37, 99, 235, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-top: 4px;
+        }
+
+        .preview-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow: hidden;
+        }
+
+        .preview-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .preview-header h2 {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .selected-info {
+            font-size: 13px;
+            color: var(--text-light);
+        }
+
+        .selected-info strong {
+            color: var(--primary);
+        }
+
+        .label-variants {
+            display: flex;
+            gap: 20px;
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .label-variant {
+            background: var(--surface);
+            border: 2px solid transparent;
+            border-radius: var(--radius);
+            padding: 24px;
+            transition: all 0.2s;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            box-shadow: var(--shadow);
+            min-height: 400px;
+            flex: 1;
+            min-width: 45%;
+            max-width: 48%;
+        }
+
+        .label-variant:hover {
+            border-color: var(--border);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .label-variant.selected {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .variant-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .variant-info h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .variant-size {
+            font-size: 13px;
+            color: var(--primary);
+            font-weight: 500;
+            background: rgba(37, 99, 235, 0.1);
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+
+        .variant-features {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .feature-tag {
+            font-size: 11px;
+            padding: 3px 8px;
+            background: var(--surface-alt);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-light);
+        }
+
+        .preview-container {
+            flex: 1;
+            min-height: 200px;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            border: 1px solid var(--border);
+        }
+
+        .label-mockup {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            gap: 12px;
+            position: relative;
+            background: white;
+            border-radius: 6px;
+            box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
+        }
+
+        .label-mockup.size-large {
+            width: 280px;
+            height: 157px;
+            font-size: 11px;
+        }
+
+        .label-mockup.size-small {
+            width: 180px;
+            height: 105px;
+            font-size: 9px;
+        }
+
+        .mockup-title {
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text);
+            line-height: 1.3;
+            max-height: 50%;
+            overflow: hidden;
+            word-wrap: break-word;
+        }
+
+        .mockup-details {
+            color: var(--text-light);
+            line-height: 1.4;
+            font-size: 0.9em;
+        }
+
+        .mockup-qr {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            background: repeating-conic-gradient(#000 0% 25%, #fff 0% 50%) 50% / 4px 4px;
+            border: 1px solid rgba(0,0,0,0.2);
+        }
+
+        .mockup-icon {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: var(--primary);
+            border-radius: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+            color: white;
+        }
+
+        .variant-stats {
+            display: flex;
+            gap: 16px;
+            font-size: 12px;
+            color: var(--text-light);
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .select-btn {
+            padding: 12px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: auto;
+        }
+
+        .select-btn:hover {
+            background: var(--primary-dark);
+        }
+
+        .details-panel {
+            flex: 0 0 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        .details-section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .details-section h3 {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-light);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dimension-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .dimension-input label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-light);
+            margin-bottom: 6px;
+        }
+
+        .dimension-input input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            color: var(--text);
+            text-align: center;
+        }
+
+        .dimension-input input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .optimization-progress {
+            margin-top: 20px;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 12px;
+            color: var(--text-light);
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: var(--surface-alt);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), #3b82f6);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+
+        .qr-section {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .qr-upload {
+            padding: 16px;
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .qr-upload:hover {
+            border-color: var(--primary);
+            background: rgba(37, 99, 235, 0.02);
+        }
+
+        .qr-upload i {
+            font-size: 24px;
+            color: var(--text-light);
+            margin-bottom: 8px;
+        }
+
+        .qr-upload span {
+            display: block;
+            font-size: 13px;
+            color: var(--text-light);
+        }
+
+        .export-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .export-btn {
+            padding: 12px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .export-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .export-btn.primary {
+            grid-column: span 2;
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .export-btn.primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .app-footer {
+            height: 60px;
+            padding: 16px 24px;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            z-index: 10;
+        }
+
+        .footer-info {
+            font-size: 13px;
+            color: var(--text-light);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .label-variant {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 2px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-light);
+        }
+        
+        .preview-panel {
+            transition: opacity 0.3s ease;
+        }
+
+        .select-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .select-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+        }
+
+        .label-variant.selected {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+            50% { box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.05); }
+            100% { box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+        }
+
+        .empty-preview {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 40px;
+            color: var(--text-light);
+            text-align: center;
+        }
+
+        .empty-preview i {
+            font-size: 48px;
+            color: var(--border);
+        }
+
+        .empty-preview h3 {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .empty-preview p {
+            font-size: 13px;
+            color: var(--text-light);
+        }
+
+        .char-counter {
+            position: absolute;
+            bottom: 80px;
+            right: 40px;
+            font-size: 11px;
+            color: var(--text-light);
+            background: rgba(255,255,255,0.9);
+            padding: 2px 8px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="input-panel">
+            <div class="panel-header">
+                <h2>LabelFlow AI</h2>
+                <span class="badge">v1.0</span>
+            </div>
+
+            <div class="input-container">
+                <div class="input-header">
+                    <h3>Опишите этикетку <span style="font-weight: 400; color: var(--text-light);">(предпросмотр обновляется автоматически)</span></h3>
+                </div>
+                
+                <textarea id="ai-input" 
+                          placeholder="Просто опишите что нужно... Предпросмотр обновится сразу при вводе!
+
+Пример:
+Товар: Апельсиновый сок 200мл
+Страна: Бразилия
+Импортёр: ООО &quot;Фруктовый мир&quot;
+Знак переработки
+Упаковка: 12×4см">Товар: Ягодный микс
+Страна: Германия
+Требуется QR-код и знак переработки
+Требуется: все значки ГОСТ
+Текст заказчика:
+Наименование продукта: Концентрат для напитка "Ягодный микс" в порошке.
+Состав продукта: сахар, мальтодекстрин, концентрированный сок черной смородины (8%), концентрированный сок малины (5%), регуляторы кислотности (лимонная кислота, цитрат натрия), натуральные ароматизаторы (малина, черная смородина), витамин С (аскорбиновая кислота), краситель: концентрат черной моркови.
+Пищевая ценность на 100 г продукта: белки 0,5 г, жиры 0 г, углеводы 94 г, из них сахара 85 г.
+Энергетическая ценность: 1600 кДж / 380 ккал.
+Способ применения: 2 чайные ложки (около 10 г) продукта растворить в 200 мл холодной или горячей воды.
+Масса нетто: 250 г.
+Срок годности: 24 месяца.
+Дата изготовления: 10.05.2024.
+Дата окончания срока годности: 10.05.2026.
+Условия хранения: хранить в сухом прохладном месте, избегая прямых солнечных лучей.
+После вскрытия упаковки употребить в течение 6 недель.
+Изготовитель: "Sunny Foods GmbH", Германия.
+Адрес изготовителя: Robert-Bosch-Strasse 10, 61169 Friedberg, Германия.
+Импортер в РФ/ЕАЭС: ООО "ВкусМир", 123456, Россия, г. Москва, ул. Ленина, д. 1, офис 15.
+Страна происхождения: Германия.
+Таможенный союз.
+Продукт соответствует требованиям технического регламента Таможенного союза ТР ТС 021/2011 "О безопасности пищевой продукции", ТР ТС 022/2011 "Пищевая продукция в части ее маркировки".
+Штрихкод продукта: 4 012345 678900.
+Не является лекарственным средством.</textarea>
+                
+                <div class="char-counter" id="char-counter">
+                    0 символов
+                </div>
+                
+                <div class="input-actions">
+                    <label class="attach-btn">
+                        <i class="fas fa-paperclip"></i>
+                        Файлы
+                        <input type="file" multiple hidden onchange="app.handleFiles(this.files)">
+                    </label>
+                    <button class="generate-btn" onclick="app.generate()">
+                        Создать варианты
+                    </button>
+                </div>
+            </div>
+
+            <div class="history-templates">
+                <h4>
+                    <i class="fas fa-history"></i>
+                    Последние заказы
+                </h4>
+            </div>
+        </div>
+
+        <div class="preview-panel">
+            <div class="preview-header">
+                <h2>Варианты этикеток</h2>
+                <div class="selected-info">
+                    Выбрано: <strong id="selected-variant">Широкий формат (16×9см)</strong>
+                </div>
+            </div>
+
+            <div class="label-variants" id="label-variants">
+            </div>
+        </div>
+
+        <div class="details-panel">
+            <div class="details-section">
+                <h3>Размеры упаковки (см)</h3>
+                
+                <div class="dimension-inputs">
+                    <div class="dimension-input">
+                        <label>Ширина</label>
+                        <input type="number" id="width" value="12" min="1" step="0.1" onchange="app.updateOptimization(); app.livePreview()">
+                    </div>
+                    <div class="dimension-input">
+                        <label>Высота</label>
+                        <input type="number" id="height" value="4" min="1" step="0.1" onchange="app.updateOptimization(); app.livePreview()">
+                    </div>
+                </div>
+
+                <div class="optimization-progress">
+                    <div class="progress-header">
+                        <span>Оптимальность</span>
+                        <span id="optimization-percent">75%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="optimization-bar" style="width: 75%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="details-section qr-section">
+                <h3>QR-код Честного знака</h3>
+                
+                <label class="qr-upload">
+                    <i class="fas fa-upload"></i>
+                    <span>Прикрепить QR-код</span>
+                    <span style="font-size: 11px; color: var(--text-light); margin-top: 4px;">PNG, JPG или введите код</span>
+                    <input type="file" accept="image/*,.txt" hidden onchange="app.handleQRUpload(this.files)">
+                </label>
+
+                <input type="text" 
+                       id="qr-code" 
+                       placeholder="Или введите код вручную..." 
+                       style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px;"
+                       oninput="app.updateQR(this.value); app.livePreview()">
+            </div>
+
+            <div class="details-section">
+                <h3>Экспорт</h3>
+                
+                <div class="export-buttons">
+                    <button class="export-btn" onclick="app.exportFormat('png')">
+                        <i class="fas fa-image"></i>
+                        PNG
+                    </button>
+                    <button class="export-btn" onclick="app.exportFormat('pdf')">
+                        <i class="fas fa-file-pdf"></i>
+                        PDF
+                    </button>
+                    <button class="export-btn primary" onclick="app.printLabel()">
+                        <i class="fas fa-print"></i>
+                        Печать
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-footer">
+        <div class="footer-info">
+            <div id="product-info">Товар: Ягодный микс</div>
+        </div>
+        <div style="font-size: 12px; color: var(--text-light);">
+            ⚡ Предпросмотр обновляется автоматически
+        </div>
+    </div>
+    
+    <script>
+    class LabelFlowApp {
+        constructor() {
+            this.selectedVariant = null;
+            this.apiUrl = 'http://localhost:8000/api';
+            this.currentProduct = 'Ягодный микс';
+            this.generatedVariants = [];
+            this.orderHistory = [];
+            this.maxHistorySize = 3;
+            this.livePreviewTimeout = null;
+            this.qrCodeData = null;
+            
+            this.init();
+        }
+        
+        init() {
+            this.loadOrderHistory();
+            this.renderOrderHistory();
+            this.updateProductInfo();
+            
+            setTimeout(() => {
+                this.livePreview();
+            }, 100);
+            
+            const input = document.getElementById('ai-input');
+            if (input) {
+                input.addEventListener('input', () => {
+                    this.updateCharCounter();
+                    this.livePreview();
+                });
+            }
+            
+            this.updateCharCounter();
+        }
+        
+        parseTextForPreview(text) {
+            const result = {
+                product_name: 'Новая этикетка',
+                product_full_name: '',
+                ingredients: '',
+                nutrition: '',
+                nutrition_facts: {},
+                energy_value: '',
+                energy_value_kj: '',
+                net_weight: '',
+                volume: '',
+                expiry_date: '',
+                manufacture_date: '',
+                shelf_life: '',
+                after_opening: '',
+                storage_conditions: '',
+                manufacturer: '',
+                manufacturer_address: '',
+                manufacturer_full: '',
+                importer: '',
+                importer_address: '',
+                importer_full: '',
+                country_of_origin: '',
+                customs_union: false,
+                eaeu: false,
+                certification: [],
+                technical_regulations: [],
+                tr_codes: [],
+                barcode: '',
+                ean13: '',
+                requires_qr: false,
+                qr_data: '',
+                has_recycle: false,
+                recycle_code: '',
+                has_gost: false,
+                gost_numbers: [],
+                usage_instructions: '',
+                dilution: '',
+                warnings: [],
+                allergens: [],
+                batch_number: ''
+            };
+            
+            if (!text) return result;
+            
+            const lines = text.split('\n');
+            const fullText = text;
+            
+            for (const line of lines) {
+                if (line.includes('Наименование продукта:')) {
+                    result.product_full_name = line.split(':')[1].trim();
+                    result.product_name = result.product_full_name;
+                    break;
+                }
+            }
+            if (!result.product_full_name) {
+                const firstLine = lines[0];
+                if (firstLine.includes(':')) {
+                    const parts = firstLine.split(':');
+                    result.product_name = parts[1]?.trim() || parts[0].trim();
+                    result.product_full_name = result.product_name;
+                } else {
+                    result.product_name = firstLine.trim();
+                    result.product_full_name = result.product_name;
+                }
+            }
+            
+            const compositionMatch = fullText.match(/Состав продукта:(.+?)(?:\.\s+Пищевая|\.\s+Способ|\.\s+Масса|\.\s+Срок|\.\s+Дата|$)/is);
+            if (compositionMatch) {
+                result.ingredients = compositionMatch[1].trim();
+            } else {
+                for (const line of lines) {
+                    if (line.toLowerCase().includes('состав продукта:') || line.toLowerCase().includes('состав:')) {
+                        result.ingredients = line.split(':')[1].trim();
+                        break;
+                    }
+                }
+            }
+            
+            const nutritionMatch = fullText.match(/Пищевая ценность на 100 г продукта:(.+?)(?:\.\s+Энергетическая|\.\s+Способ|\.\s+Масса|$)/is);
+            if (nutritionMatch) {
+                result.nutrition = nutritionMatch[1].trim();
+            }
+            
+            const energyMatch = fullText.match(/Энергетическая ценность:\s*(\d+)\s*кДж\s*\/\s*(\d+)\s*ккал/i);
+            if (energyMatch) {
+                result.energy_value_kj = energyMatch[1] + ' кДж';
+                result.energy_value = energyMatch[2] + ' ккал';
+            }
+            
+            const weightMatch = fullText.match(/Масса нетто:\s*(\d+\s*г)/i);
+            if (weightMatch) {
+                result.net_weight = weightMatch[1];
+            }
+            
+            const shelfLifeMatch = fullText.match(/Срок годности:\s*(\d+\s*месяца?)/i);
+            if (shelfLifeMatch) {
+                result.shelf_life = shelfLifeMatch[1];
+            }
+            
+            const manufactureMatch = fullText.match(/Дата изготовления:\s*([\d\.]+)/i);
+            if (manufactureMatch) {
+                result.manufacture_date = manufactureMatch[1];
+            }
+            
+            const expiryMatch = fullText.match(/Дата окончания срока годности:\s*([\d\.]+)/i);
+            if (expiryMatch) {
+                result.expiry_date = expiryMatch[1];
+            }
+            
+            const afterMatch = fullText.match(/После вскрытия упаковки\s*([^.]+)/i);
+            if (afterMatch) {
+                result.after_opening = 'После вскрытия: ' + afterMatch[1].trim();
+            }
+            
+            const storageMatch = fullText.match(/Условия хранения:\s*([^.]+)/i);
+            if (storageMatch) {
+                result.storage_conditions = storageMatch[1].trim();
+            }
+            
+            const manufacturerMatch = fullText.match(/Изготовитель:\s*([^.]+)/i);
+            if (manufacturerMatch) {
+                result.manufacturer = manufacturerMatch[1].trim();
+            }
+            
+            const manufacturerAddressMatch = fullText.match(/Адрес изготовителя:\s*([^.]+)/i);
+            if (manufacturerAddressMatch) {
+                result.manufacturer_address = manufacturerAddressMatch[1].trim();
+                result.manufacturer_full = result.manufacturer + ', ' + result.manufacturer_address;
+            } else {
+                result.manufacturer_full = result.manufacturer;
+            }
+            
+            const importerMatch = fullText.match(/Импортер в РФ\/ЕАЭС:\s*([^.]+)/i);
+            if (importerMatch) {
+                result.importer = importerMatch[1].trim();
+                result.importer_full = result.importer;
+            }
+            
+            const importerAddressMatch = fullText.match(/ООО.*?,\s*\d+,\s*Россия,[^.]+/i);
+            if (importerAddressMatch) {
+                result.importer_address = importerAddressMatch[0];
+                result.importer_full = result.importer + ', ' + result.importer_address;
+            }
+            
+            const countryMatch = fullText.match(/Страна происхождения:\s*([^.]+)/i);
+            if (countryMatch) {
+                result.country_of_origin = countryMatch[1].trim();
+            }
+            
+            if (fullText.includes('Таможенный союз')) {
+                result.customs_union = true;
+            }
+            
+            const trMatches = fullText.matchAll(/(ТР ТС\s*\d{3,4}\/\d{4})/gi);
+            for (const match of trMatches) {
+                if (!result.technical_regulations.includes(match[1])) {
+                    result.technical_regulations.push(match[1]);
+                }
+            }
+            
+            const barcodeMatch = fullText.match(/Штрихкод продукта:\s*([\d\s]+)/i);
+            if (barcodeMatch) {
+                result.barcode = barcodeMatch[1].trim();
+                result.ean13 = result.barcode;
+            }
+            
+            if (fullText.includes('Не является лекарственным средством')) {
+                result.warnings.push('Не является лекарственным средством');
+            }
+            
+            if (fullText.includes('Требуется QR-код') || fullText.includes('Честного знака')) {
+                result.requires_qr = true;
+            }
+            
+            if (fullText.includes('знак переработки')) {
+                result.has_recycle = true;
+            }
+            
+            if (fullText.includes('значки ГОСТ') || fullText.includes('Требуется: все значки ГОСТ')) {
+                result.has_gost = true;
+            }
+            
+            const usageMatch = fullText.match(/Способ применения:\s*([^.]+)/i);
+            if (usageMatch) {
+                result.usage_instructions = usageMatch[1].trim();
+                
+                const dilutionMatch = usageMatch[1].match(/(\d+)\s*г.*?(\d+)\s*мл/i);
+                if (dilutionMatch) {
+                    result.dilution = dilutionMatch[1] + 'г / ' + dilutionMatch[2] + 'мл';
+                }
+            }
+            
+            console.log('✅ Парсинг завершен:', {
+                product: result.product_name,
+                ingredients: result.ingredients?.substring(0, 50) + '...',
+                nutrition: result.nutrition,
+                energy: result.energy_value,
+                manufacturer: result.manufacturer_full,
+                importer: result.importer_full,
+                barcode: result.barcode
+            });
+            
+            return result;
+        }
+        
+        livePreview() {
+            const text = document.getElementById('ai-input')?.value.trim() || '';
+            const parsedData = this.parseTextForPreview(text);
+            this.currentProduct = parsedData.product_name;
+            this.updateProductInfo();
+            const previewVariants = this.createPreviewVariants(parsedData);
+            this.displayLivePreviews(previewVariants, parsedData);
+            this.updateOptimization();
+        }
+        
+        createPreviewVariants(data) {
+            const width = parseFloat(document.getElementById('width')?.value) || 12;
+            const height = parseFloat(document.getElementById('height')?.value) || 4;
+            
+            const qrInput = document.getElementById('qr-code')?.value || '';
+            const hasQR = qrInput.length > 0 || this.qrCodeData;
+            
+            return [
+                {
+                    id: 1,
+                    name: 'Широкий формат',
+                    size: '16 × 9 см',
+                    width: 16,
+                    height: 9,
+                    features: ['Заголовок CAPS', 'Перенос строк', hasQR ? 'QR справа' : 'Без QR', 'Подробная информация'],
+                    previewData: data,
+                    isLive: true,
+                    hasQR: hasQR,
+                    qrData: qrInput || this.qrCodeData || 'QR'
+                },
+                {
+                    id: 2,
+                    name: 'Минимализм',
+                    size: '10 × 7 см',
+                    width: 10,
+                    height: 7,
+                    features: ['Только важное', hasQR ? 'Крупный QR' : 'Без QR', 'Чистый дизайн'],
+                    previewData: data,
+                    isLive: true,
+                    hasQR: hasQR,
+                    qrData: qrInput || this.qrCodeData || 'QR'
+                }
+            ];
+        }
+        
+        displayLivePreviews(variants, parsedData) {
+            const container = document.getElementById('label-variants');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            if (!parsedData || !parsedData.product_name || parsedData.product_name === 'Новая этикетка' && !document.getElementById('ai-input')?.value.trim()) {
+                container.innerHTML = `
+                    <div style="flex: 1; display: flex; align-items: center; justify-content: center;">
+                        <div class="empty-preview">
+                            <i class="fas fa-paint-brush"></i>
+                            <h3>Начните вводить текст</h3>
+                            <p>Предпросмотр этикеток появится сразу<br>как вы начнете печатать</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            
+            variants.forEach((variant, index) => {
+                const variantHTML = this.createLiveVariantHTML(variant, index, parsedData);
+                container.innerHTML += variantHTML;
+            });
+            
+            if (variants[0]) {
+                document.getElementById('selected-variant').innerHTML = 
+                    '<strong>' + variants[0].name + ' (' + variants[0].size + ')</strong>';
+                this.selectedVariant = variants[0];
+            }
+            
+            const firstVariant = container.querySelector('.label-variant');
+            if (firstVariant) {
+                firstVariant.classList.add('selected');
+            }
+        }
+        
+        createLiveVariantHTML(variant, index, parsedData) {
+            const previewText = this.createLivePreviewText(parsedData, variant);
+            let previewSizeClass = 'size-large';
+            if (variant.width <= 10) previewSizeClass = 'size-small';
+            const qrStyle = this.getLiveQRStyle(variant);
+            
+            return `
+                <div class="label-variant ${index === 0 ? 'selected' : ''}" 
+                     onclick="app.selectLiveVariant(${index})" 
+                     data-index="${index}">
+                    <div class="variant-header">
+                        <div class="variant-info">
+                            <h3>${variant.name}</h3>
+                            <div class="variant-size">${variant.size}</div>
+                        </div>
+                        <div class="variant-features">
+                            ${variant.features.filter(f => f).map(f => 
+                                `<span class="feature-tag">${f}</span>`
+                            ).join('')}
+                        </div>
+                    </div>
+                    
+                    <div class="preview-container">
+                        <div class="label-mockup ${previewSizeClass}" style="position: relative;">
+                            <div class="mockup-title" style="font-size: ${variant.width >= 16 ? '14px' : '12px'};">${previewText.title}</div>
+                            <div class="mockup-details">${previewText.details}</div>
+                            
+                            ${variant.hasQR ? 
+                                `<div class="mockup-qr" style="${qrStyle}" title="${variant.qrData || 'QR-код'}"></div>` : 
+                                ''}
+                            
+                            ${parsedData.has_recycle ? 
+                                `<div class="mockup-icon" style="bottom: 15px; left: 15px; background: #10b981;">♻</div>` : 
+                                ''}
+                            
+                            ${parsedData.has_gost ? 
+                                `<div class="mockup-icon" style="top: 15px; right: 15px; background: #f59e0b;">ГОСТ</div>` : 
+                                ''}
+                        </div>
+                    </div>
+                    
+                    <div class="variant-stats">
+                        <div class="stat-item">
+                            <i class="fas fa-text-height"></i>
+                            <span>Шрифт: ${this.calculateLiveFontSize(variant.width)}pt</span>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-eye"></i>
+                            <span>Читаемость: ${this.calculateLiveReadability(variant.width)}%</span>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-qrcode"></i>
+                            <span>QR: ${variant.hasQR ? 'Да' : 'Нет'}</span>
+                        </div>
+                    </div>
+                    
+                    <button class="select-btn" onclick="app.exportLiveVariant(${index})">
+                        <i class="fas fa-download"></i>
+                        Экспорт
+                    </button>
+                </div>
+            `;
+        }
+        
+        createLivePreviewText(data, variant) {
+            let title = data.product_name.toUpperCase();
+            if (title.length > 40) {
+                title = title.substring(0, 37) + '...';
+            }
+            
+            const detailsParts = [];
+            if (data.country_of_origin && data.country_of_origin !== 'Страна') {
+                detailsParts.push(data.country_of_origin);
+            }
+            if (data.net_weight) {
+                detailsParts.push(data.net_weight);
+            }
+            if (data.importer && data.importer !== 'Импортёр') {
+                let importerShort = data.importer;
+                if (importerShort.length > 25) {
+                    importerShort = importerShort.substring(0, 22) + '...';
+                }
+                detailsParts.push(importerShort);
+            }
+            if (data.has_recycle) {
+                detailsParts.push('♻');
+            }
+            
+            let details = detailsParts.join(' • ');
+            if (!details) {
+                details = 'Этикетка • Предпросмотр';
+            }
+            
+            return {
+                title: title,
+                details: details
+            };
+        }
+        
+        getLiveQRStyle(variant) {
+            if (variant.name.includes('Широкий')) {
+                return 'bottom: 15px; right: 15px;';
+            } else {
+                return 'bottom: 20px; left: 50%; transform: translateX(-50%); width: 30px; height: 30px;';
+            }
+        }
+        
+        selectLiveVariant(index) {
+            const allVariants = document.querySelectorAll('.label-variant');
+            allVariants.forEach(v => v.classList.remove('selected'));
+            const selectedElement = document.querySelector(`[data-index="${index}"]`);
+            if (selectedElement) {
+                selectedElement.classList.add('selected');
+                const title = selectedElement.querySelector('h3').textContent;
+                const size = selectedElement.querySelector('.variant-size').textContent;
+                document.getElementById('selected-variant').innerHTML = 
+                    `<strong>${title} (${size})</strong>`;
+                this.selectedVariant = this.generatedVariants[index] || { id: index + 1, name: title };
+            }
+        }
+        
+        async generate() {
+            const text = document.getElementById('ai-input').value.trim();
+            if (!text) {
+                this.showMessage('Введите описание этикетки', 'warning');
+                return;
+            }
+            
+            this.showMessage('Генерация этикеток...', 'info');
+            
+            try {
+                const response = await fetch(`${this.apiUrl}/generate`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ text: text })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.generatedVariants = data.variants;
+                    this.showMessage('Этикетки созданы!', 'success');
+                    this.saveToHistory(text, data.product_name);
+                } else {
+                    throw new Error(data.error || 'Ошибка сервера');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                this.showMessage('Ошибка подключения к серверу', 'warning');
+                const parsedData = this.parseTextForPreview(text);
+                this.saveToHistory(text, parsedData.product_name);
+            }
+        }
+        
+        exportLiveVariant(index) {
+            const text = document.getElementById('ai-input').value;
+            const parsedData = this.parseTextForPreview(text);
+            const qrCode = document.getElementById('qr-code').value || this.qrCodeData || '';
+            
+            const params = new URLSearchParams();
+            
+            params.append('product_name', parsedData.product_name || 'Товар');
+            params.append('product_full_name', parsedData.product_full_name || parsedData.product_name || '');
+            params.append('ingredients', parsedData.ingredients || '');
+            params.append('nutrition', parsedData.nutrition || '');
+            params.append('energy_value', parsedData.energy_value || '');
+            params.append('energy_value_kj', parsedData.energy_value_kj || '');
+            params.append('net_weight', parsedData.net_weight || '');
+            params.append('expiry_date', parsedData.expiry_date || '');
+            params.append('manufacture_date', parsedData.manufacture_date || '');
+            params.append('shelf_life', parsedData.shelf_life || '');
+            params.append('after_opening', parsedData.after_opening || '');
+            params.append('storage_conditions', parsedData.storage_conditions || '');
+            params.append('manufacturer', parsedData.manufacturer || '');
+            params.append('manufacturer_address', parsedData.manufacturer_address || '');
+            params.append('manufacturer_full', parsedData.manufacturer_full || '');
+            params.append('importer', parsedData.importer || '');
+            params.append('importer_address', parsedData.importer_address || '');
+            params.append('importer_full', parsedData.importer_full || '');
+            params.append('country', parsedData.country_of_origin || '');
+            params.append('country_of_origin', parsedData.country_of_origin || '');
+            params.append('customs_union', parsedData.customs_union ? 'true' : 'false');
+            
+            if (parsedData.technical_regulations && parsedData.technical_regulations.length) {
+                params.append('technical_regulations', parsedData.technical_regulations.join('|'));
+            }
+            
+            params.append('barcode', parsedData.barcode || parsedData.ean13 || '');
+            params.append('ean13', parsedData.ean13 || parsedData.barcode || '');
+            params.append('qr_required', parsedData.requires_qr ? 'true' : 'false');
+            params.append('qr', qrCode || parsedData.qr_data || '');
+            params.append('recycle', parsedData.has_recycle ? 'true' : 'false');
+            params.append('gost', parsedData.has_gost ? 'true' : 'false');
+            params.append('usage_instructions', parsedData.usage_instructions || '');
+            
+            if (parsedData.warnings && parsedData.warnings.length) {
+                params.append('warnings', parsedData.warnings.join('|'));
+            }
+            
+            const variant = this.generatedVariants[index] || { id: index + 1 };
+            const exportUrl = `${this.apiUrl}/export/${variant.id}?${params.toString()}`;
+            
+            window.location.href = exportUrl;
+            this.showMessage(`Скачивание этикетки для "${parsedData.product_name}"`, 'success');
+        }
+        
+        exportFormat(format) {
+            if (format === 'png' && this.selectedVariant) {
+                const text = document.getElementById('ai-input').value;
+                const parsedData = this.parseTextForPreview(text);
+                const qrCode = document.getElementById('qr-code').value || this.qrCodeData || '';
+                
+                const params = new URLSearchParams({
+                    product_name: parsedData.product_name || 'Товар',
+                    country: parsedData.country_of_origin || '',
+                    importer: parsedData.importer || '',
+                    manufacturer: parsedData.manufacturer || '',
+                    recycle: parsedData.has_recycle ? 'true' : 'false',
+                    gost: parsedData.has_gost ? 'true' : 'false',
+                    qr: qrCode || 'QR'
+                });
+                
+                const variantId = this.selectedVariant.id || 1;
+                window.location.href = `${this.apiUrl}/export/${variantId}?${params.toString()}`;
+                this.showMessage(`Скачивание этикетки для "${parsedData.product_name}"`, 'success');
+            } else if (format === 'pdf') {
+                this.showMessage('PDF экспорт будет доступен позже', 'warning');
+            } else {
+                this.showMessage('Выберите вариант этикетки', 'warning');
+            }
+        }
+        
+        updateCharCounter() {
+            const input = document.getElementById('ai-input');
+            const counter = document.getElementById('char-counter');
+            if (input && counter) {
+                const count = input.value.length;
+                counter.textContent = `${count} символов`;
+            }
+        }
+        
+        calculateLiveFontSize(width) {
+            if (width >= 16) return 16;
+            return 12;
+        }
+        
+        calculateLiveReadability(width) {
+            if (width >= 16) return 95;
+            return 82;
+        }
+        
+        saveToHistory(text, productName) {
+            const order = {
+                id: Date.now(),
+                text: text,
+                productName: productName || 'Неизвестный товар',
+                timestamp: new Date().toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'}),
+                date: new Date().toISOString()
+            };
+            
+            this.orderHistory.unshift(order);
+            if (this.orderHistory.length > this.maxHistorySize) {
+                this.orderHistory = this.orderHistory.slice(0, this.maxHistorySize);
+            }
+            this.saveOrderHistory();
+            this.renderOrderHistory();
+        }
+        
+        loadOrderHistory() {
+            try {
+                const saved = localStorage.getItem('labelflow_order_history');
+                if (saved) {
+                    this.orderHistory = JSON.parse(saved);
+                    this.orderHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
+                    if (this.orderHistory.length > this.maxHistorySize) {
+                        this.orderHistory = this.orderHistory.slice(0, this.maxHistorySize);
+                    }
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки истории:', error);
+                this.orderHistory = [];
+            }
+        }
+        
+        saveOrderHistory() {
+            try {
+                localStorage.setItem('labelflow_order_history', JSON.stringify(this.orderHistory));
+            } catch (error) {
+                console.error('Ошибка сохранения истории:', error);
+            }
+        }
+        
+        renderOrderHistory() {
+            const container = document.querySelector('.history-templates');
+            if (!container) return;
+            
+            const header = container.querySelector('h4');
+            if (!header) return;
+            
+            let nextElement = header.nextElementSibling;
+            while (nextElement) {
+                const toRemove = nextElement;
+                nextElement = nextElement.nextElementSibling;
+                toRemove.remove();
+            }
+            
+            const templatesContainer = document.createElement('div');
+            templatesContainer.className = 'templates-list';
+            container.appendChild(templatesContainer);
+            
+            const itemsToShow = this.orderHistory.length > 0 ? 
+                this.orderHistory : [
+                    {
+                        id: 1,
+                        productName: 'Ягодный микс',
+                        text: document.getElementById('ai-input').value,
+                        timestamp: 'Пример'
+                    }
+                ];
+            
+            itemsToShow.forEach((order) => {
+                const orderElement = document.createElement('div');
+                orderElement.className = 'template-item';
+                orderElement.innerHTML = `
+                    <div class="template-product">${order.productName}</div>
+                    <div style="font-size: 12px; color: var(--text-light); margin-bottom: 6px;">
+                        ${this.getPreviewText(order.text)}
+                    </div>
+                    <div class="template-size">${order.timestamp}</div>
+                `;
+                
+                orderElement.addEventListener('click', () => {
+                    this.loadFromHistory(order);
+                });
+                
+                templatesContainer.appendChild(orderElement);
+            });
+        }
+        
+        getPreviewText(text) {
+            const lines = text.split('\n').filter(line => line.trim());
+            if (lines.length < 2) return text.substring(0, 60) + '...';
+            const previewLines = lines.slice(1, 3).map(line => {
+                const cleanLine = line.split(':').slice(1).join(':').trim() || line.trim();
+                return cleanLine.substring(0, 30);
+            });
+            return previewLines.join(' • ') + (lines.length > 3 ? '...' : '');
+        }
+        
+        loadFromHistory(order) {
+            document.getElementById('ai-input').value = order.text;
+            this.currentProduct = order.productName;
+            this.updateProductInfo();
+            this.showMessage(`Загружен заказ: ${order.productName}`, 'success');
+            this.livePreview();
+            setTimeout(() => {
+                this.generate();
+            }, 500);
+        }
+        
+        updateProductInfo() {
+            const productEl = document.getElementById('product-info');
+            if (productEl) productEl.textContent = 'Товар: ' + (this.currentProduct || 'Новая этикетка');
+        }
+        
+        updateOptimization() {
+            const width = parseFloat(document.getElementById('width').value) || 12;
+            const height = parseFloat(document.getElementById('height').value) || 4;
+            const packageArea = width * height;
+            const labelArea = 16 * 9;
+            const coverage = Math.min(100, Math.round((labelArea / packageArea) * 100 * 0.8));
+            
+            const percentEl = document.getElementById('optimization-percent');
+            const barEl = document.getElementById('optimization-bar');
+            
+            if (percentEl) percentEl.textContent = coverage + '%';
+            if (barEl) barEl.style.width = coverage + '%';
+        }
+        
+        showMessage(text, type = 'info') {
+            console.log(`${type}: ${text}`);
+            
+            const existingNotifications = document.querySelectorAll('.notification');
+            existingNotifications.forEach(n => n.remove());
+            
+            const colors = {
+                info: '#3b82f6',
+                success: '#10b981',
+                warning: '#f59e0b',
+                error: '#ef4444'
+            };
+            
+            const color = colors[type] || colors.info;
+            
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.innerHTML = `
+                <div style="position: fixed; top: 20px; right: 20px; background: ${color}; 
+                            color: white; padding: 12px 20px; border-radius: 8px; font-size: 14px; z-index: 1000; 
+                            animation: fadeIn 0.3s; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                    ${text}
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'fadeOut 0.3s';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
+        
+        handleFiles(files) {
+            if (files.length > 0) {
+                this.showMessage('Добавлено ' + files.length + ' файл(ов)', 'info');
+            }
+        }
+        
+        handleQRUpload(files) {
+            if (files.length > 0) {
+                const file = files[0];
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        this.qrCodeData = 'QR_загружен';
+                        document.getElementById('qr-code').value = 'QR-код загружен';
+                        this.showMessage('QR-код загружен', 'success');
+                        this.livePreview();
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        this.qrCodeData = e.target.result.substring(0, 30) + '...';
+                        document.getElementById('qr-code').value = 'Код из файла';
+                        this.showMessage('Данные загружены', 'success');
+                        this.livePreview();
+                    };
+                    reader.readAsText(file);
+                }
+            }
+        }
+        
+        updateQR(value) {
+            this.qrCodeData = value || null;
+        }
+        
+        printLabel() {
+            this.showMessage('Подготовка к печати...');
+            setTimeout(() => {
+                window.print();
+            }, 500);
+        }
+        
+        clearHistory() {
+            if (confirm('Очистить историю заказов?')) {
+                this.orderHistory = [];
+                localStorage.removeItem('labelflow_order_history');
+                this.renderOrderHistory();
+                this.showMessage('История очищена', 'info');
+            }
+        }
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        window.app = new LabelFlowApp();
+        
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(-10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            @keyframes fadeOut {
+                from { opacity: 1; transform: translateY(0); }
+                to { opacity: 0; transform: translateY(-10px); }
+            }
+            
+            .selected-template {
+                background: rgba(37, 99, 235, 0.05) !important;
+                border-color: var(--primary) !important;
+            }
+            
+            .history-templates h4 {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            
+            .clear-history-btn {
+                background: none;
+                border: none;
+                color: var(--text-light);
+                cursor: pointer;
+                font-size: 12px;
+                padding: 2px 6px;
+                border-radius: 4px;
+            }
+            
+            .clear-history-btn:hover {
+                color: var(--primary);
+                background: rgba(37, 99, 235, 0.1);
+            }
+        `;
+        document.head.appendChild(style);
+        
+        const historyHeader = document.querySelector('.history-templates h4');
+        if (historyHeader) {
+            const clearBtn = document.createElement('button');
+            clearBtn.className = 'clear-history-btn';
+            clearBtn.innerHTML = '<i class="fas fa-trash"></i>';
+            clearBtn.title = 'Очистить историю';
+            clearBtn.onclick = () => app.clearHistory();
+            historyHeader.appendChild(clearBtn);
+        }
+    });
+    </script>
+</body>
+</html>
