@@ -9,12 +9,15 @@ import json
 
 from datetime import datetime
 from werkzeug.utils import secure_filename
+import re
+import math
 
 from pathlib import Path
 
 from excel_parser import xls_to_json_single
 
 from analyzer import perform_abc_xyz_analysis
+from combined_report import generate_combined_report
 
 import pandas as pd
 
@@ -282,6 +285,10 @@ def index():
     """Р вЂњР В»Р В°Р Р†Р Р…Р В°РЎРЏ РЎРѓРЎвЂљРЎР‚Р В°Р Р…Р С‘РЎвЂ Р В° РЎРѓ РЎвЂћР С•РЎР‚Р С�Р С•Р в„–"""
 
     return render_template('form4.html')
+
+@app.route('/combined')
+def combined_page():
+    return render_template('combined.html')
 
 
 
@@ -645,6 +652,98 @@ def upload_file():
 
         return jsonify({'error': str(e)}), 500
 
+
+
+@app.route('/upload-combined', methods=['POST'])
+def upload_combined():
+    """Загрузка нескольких Excel файлов и формирование общего отчета."""
+    try:
+        files = request.files.getlist('files')
+        if not files:
+            return jsonify({'success': False, 'error': 'Файлы не найдены в запросе'}), 400
+
+        saved_files = []
+        for file in files:
+            if file and allowed_file(file.filename):
+                original_name = file.filename
+                filename = secure_filename(file.filename)
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(filepath)
+                saved_files.append({
+                    'path': filepath,
+                    'original_name': original_name,
+                    'saved_name': filename
+                })
+
+        if not saved_files:
+            return jsonify({'success': False, 'error': 'Нет валидных Excel файлов (.xls, .xlsx)'}), 400
+
+        def normalize_name(value: str) -> str:
+            return re.sub(r"[^0-9a-z\u0430-\u044f]+", "", value.lower())
+
+        # Определяем файлы по названию (используем оригинальные имена, а не secure_filename)
+        file_map = {}
+        for entry in saved_files:
+            name = normalize_name(entry['original_name'])
+            if 'articlemasterdata' in name or 'основныеданные' in name:
+                file_map['master'] = entry['path']
+            elif 'движениястока' in name:
+                file_map['movements'] = entry['path']
+            elif 'линиипикинга' in name:
+                file_map['lines'] = entry['path']
+            elif 'abc' in name and 'анализ' in name:
+                file_map['abc'] = entry['path']
+            elif 'проверказаказано' in name:
+                file_map['order_picked'] = entry['path']
+            elif 'pud' in name or ('отч' in name and 'стоку' in name):
+                file_map['stock'] = entry['path']
+
+        required_keys = ['master', 'movements', 'lines', 'abc', 'order_picked', 'stock']
+        missing = [key for key in required_keys if key not in file_map]
+        if missing:
+            return jsonify({
+                'success': False,
+                'error': 'Не все обязательные файлы загружены',
+                'missing': missing
+            }), 400
+
+        result = generate_combined_report(
+            master_file=Path(file_map['master']),
+            stock_report_file=Path(file_map['stock']),
+            order_picked_file=Path(file_map['order_picked']),
+            stock_movements_file=Path(file_map['movements']),
+            picking_lines_file=Path(file_map['lines']),
+            abc_analysis_file=Path(file_map['abc']),
+            output_dir=ANALYSIS_RESULTS_DIR
+        )
+
+        def sanitize(value):
+            if value is None:
+                return None
+            if isinstance(value, float) and math.isnan(value):
+                return None
+            if isinstance(value, dict):
+                return {k: sanitize(v) for k, v in value.items()}
+            if isinstance(value, (list, tuple)):
+                return [sanitize(v) for v in value]
+            return value
+
+        return jsonify({
+            'success': True,
+            'report_file': result.file_path.name,
+            'rows': sanitize(result.rows)
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/download-report/<path:filename>')
+def download_report(filename):
+    """Скачивание сформированного общего отчета."""
+    try:
+        return send_from_directory(ANALYSIS_RESULTS_DIR, filename, as_attachment=True)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 404
 
 
 @app.route('/api/analysis-data', methods=['GET'])

@@ -562,6 +562,19 @@ tr:last-child td {
     }
 }
 
+/* Подсветка мертвого стока в общем отчете */
+.dead-stock-red {
+    background-color: #ffe5e5;
+}
+
+.dead-stock-yellow {
+    background-color: #fff5cc;
+}
+
+.dead-stock-green {
+    background-color: #e9f7ef;
+}
+
 @media (max-width: 480px) {
     .charts-section h2 {
         font-size: 20px;

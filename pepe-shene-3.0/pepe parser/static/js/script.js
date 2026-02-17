@@ -12,6 +12,10 @@ const notification = document.getElementById('notification');
 const notificationText = document.getElementById('notification-text');
 const progressFill = document.getElementById('progress-fill');
 const tableBody = document.getElementById('tableBody');
+const combinedFileInput = document.getElementById('combinedFileInput');
+const combinedTableBody = document.getElementById('combinedTableBody');
+const combinedReportDownload = document.getElementById('combinedReportDownload');
+const DISABLE_DB_NOTIFICATIONS = window.DISABLE_DB_NOTIFICATIONS === true;
 const dynamicAnalysisInfo = document.getElementById('dynamicAnalysisInfo');
 const analysisStats = document.getElementById('analysisStats');
 const statsDetails = document.getElementById('statsDetails');
@@ -82,6 +86,7 @@ function updateProgress(percentage) {
 
 // =============== DRAG & DROP И ЗАГРУЗКА ФАЙЛОВ ===============
 function setupDragAndDrop() {
+    if (!dropArea) return;
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         dropArea.addEventListener(eventName, preventDefaults, false);
     });
@@ -120,9 +125,19 @@ function handleDrop(e) {
 }
 
 function setupFileInput() {
+    if (!fileInput) return;
     fileInput.addEventListener('change', function(e) {
         if (this.files.length > 0) {
             processFile(this.files[0]);
+        }
+    });
+}
+
+function setupCombinedFileInput() {
+    if (!combinedFileInput) return;
+    combinedFileInput.addEventListener('change', function() {
+        if (this.files.length > 0) {
+            processCombinedFiles(Array.from(this.files));
         }
     });
 }
@@ -212,6 +227,116 @@ async function uploadFile(formData) {
     }
 }
 
+function processCombinedFiles(files) {
+    const validExtensions = ['.xls', '.xlsx'];
+    const maxSize = 10 * 1024 * 1024;
+    const invalid = [];
+
+    const formData = new FormData();
+    files.forEach(file => {
+        const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+        if (!validExtensions.includes(fileExtension)) {
+            invalid.push(file.name);
+            return;
+        }
+        if (file.size > maxSize) {
+            invalid.push(file.name);
+            return;
+        }
+        formData.append('files', file);
+    });
+
+    if (invalid.length > 0) {
+        showNotification(`Ошибка: неподходящие файлы: ${invalid.join(', ')}`, 'error');
+        return;
+    }
+
+    showNotification(`Загрузка файлов для общего отчета: ${files.length}`, 'info', { autoHide: false });
+    updateProgress(30);
+    uploadCombinedFiles(formData);
+}
+
+async function uploadCombinedFiles(formData) {
+    try {
+        updateProgress(50);
+        const response = await fetch(`${API_BASE_URL}/upload-combined`, {
+            method: 'POST',
+            body: formData
+        });
+        updateProgress(80);
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+            updateProgress(100);
+            hideNotification();
+            showNotification('Общий отчет сформирован', 'success');
+            displayCombinedReport(result.rows || []);
+            if (combinedReportDownload && result.report_file) {
+                combinedReportDownload.href = `${API_BASE_URL}/download-report/${encodeURIComponent(result.report_file)}`;
+                combinedReportDownload.style.display = 'inline-block';
+            }
+        } else {
+            const message = result.error || 'Ошибка при формировании отчета';
+            showNotification(message, 'error');
+            updateProgress(0);
+        }
+    } catch (error) {
+        console.error('Ошибка загрузки файлов:', error);
+        showNotification('Ошибка соединения с сервером', 'error');
+        updateProgress(0);
+    }
+}
+
+function displayCombinedReport(rows) {
+    if (!combinedTableBody) return;
+    combinedTableBody.innerHTML = '';
+
+    if (!rows || rows.length === 0) {
+        combinedTableBody.innerHTML = `
+            <tr>
+                <td colspan="22" style="text-align: center; padding: 40px;">
+                    Нет данных для общего отчета
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    rows.forEach(row => {
+        const tr = document.createElement('tr');
+        const status = (row['Мертвый сток'] || '').toString().toLowerCase();
+        if (status === 'красный') tr.classList.add('dead-stock-red');
+        if (status === 'желтый') tr.classList.add('dead-stock-yellow');
+        if (status === 'зеленый') tr.classList.add('dead-stock-green');
+
+        tr.innerHTML = `
+            <td>${row['АРТИКУЛ'] ?? ''}</td>
+            <td>${row['НАЗВАНИЕ'] ?? ''}</td>
+            <td>${row['Аллея пикинг'] ?? ''}</td>
+            <td>${row['Место пикинг'] ?? ''}</td>
+            <td>${row['MAX PICK'] ?? 0}</td>
+            <td>${row['Кол-во палет реапро'] ?? 0}</td>
+            <td>${row['Кол-во коробов реапро'] ?? 0}</td>
+            <td>${row['Кол-во штук Реапро'] ?? 0}</td>
+            <td>${row['Кол-во заказов'] ?? 0}</td>
+            <td>${row['Дата последнего выхода'] ?? ''}</td>
+            <td>${row['Выход в коробах из пикинга'] ?? 0}</td>
+            <td>${row['Выход в штуках'] ?? 0}</td>
+            <td>${row['Палетизация'] ?? ''}</td>
+            <td>${row['PCB'] ?? ''}</td>
+            <td>${row['ABC класс'] ?? ''}</td>
+            <td>${row['Стокаж'] ?? ''}</td>
+            <td>${row['Кол-во линий'] ?? 0}</td>
+            <td>${(row['Процент (реаппро)'] ?? 0).toFixed ? row['Процент (реаппро)'].toFixed(2) : (row['Процент (реаппро)'] ?? 0)}</td>
+            <td>${(row['Популярность (реаппро)'] ?? 0).toFixed ? row['Популярность (реаппро)'].toFixed(2) : (row['Популярность (реаппро)'] ?? 0)}</td>
+            <td>${(row['Процент (линии)'] ?? 0).toFixed ? row['Процент (линии)'].toFixed(2) : (row['Процент (линии)'] ?? 0)}</td>
+            <td>${(row['Популярность (линии)'] ?? 0).toFixed ? row['Популярность (линии)'].toFixed(2) : (row['Популярность (линии)'] ?? 0)}</td>
+            <td>${row['Мертвый сток'] ?? ''}</td>
+        `;
+        combinedTableBody.appendChild(tr);
+    });
+}
+
 function displayAnalysisStats(data) {
     if (!analysisStats || !statsDetails) return;
     
@@ -272,15 +397,21 @@ async function autoLoadCharts() {
             lastUpdateTime = new Date();
             updateLastUpdateTime();
             
-            showNotification(`Графики успешно сгенерированы!`, 'success');
+            if (!window.DISABLE_CHART_NOTIFICATIONS) {
+                showNotification(`Графики успешно сгенерированы!`, 'success');
+            }
         } else {
-            showNotification('Не удалось загрузить графики', 'error');
+            if (!window.DISABLE_CHART_NOTIFICATIONS) {
+                showNotification('Не удалось загрузить графики', 'error');
+            }
             showChartsLoading(false);
         }
         
     } catch (error) {
         console.error('Ошибка загрузки графиков:', error);
-        showNotification('Ошибка построения графиков', 'error');
+        if (!window.DISABLE_CHART_NOTIFICATIONS) {
+            showNotification('Ошибка построения графиков', 'error');
+        }
         showChartsLoading(false);
     }
 }
@@ -647,7 +778,7 @@ function updateLastUpdateTime() {
 async function loadAnalysisDataFromAPI(options = {}) {
     const showNotifications = options.showNotifications !== undefined ? options.showNotifications : true;
     try {
-        if (showNotifications) {
+        if (showNotifications && !DISABLE_DB_NOTIFICATIONS) {
             showNotification('Загрузка данных анализа из базы данных...', 'info');
         }
         
@@ -659,7 +790,9 @@ async function loadAnalysisDataFromAPI(options = {}) {
             updateAnalysisInfo(result.data);
             
             if (showNotifications) {
-                showNotification('Данные анализа успешно загружены!', 'success');
+                if (!DISABLE_DB_NOTIFICATIONS) {
+                    showNotification('Данные анализа успешно загружены!', 'success');
+                }
             }
             return Array.isArray(result.data) ? result.data.length : 0;
         } else {
@@ -708,7 +841,9 @@ async function loadAnalysisDataFromFile() {
             displayAnalysisTable(result.data);
             updateAnalysisInfo(result.data);
             
-            showNotification('Данные анализа успешно загружены из файла!', 'success');
+            if (!DISABLE_DB_NOTIFICATIONS) {
+                showNotification('Данные анализа успешно загружены из файла!', 'success');
+            }
         } else {
             showNotification('Нет данных для отображения', 'warning');
         }
@@ -839,7 +974,9 @@ async function checkExistingData(options = {}) {
             
             // Показываем сообщение о загрузке существующих данных
             if (showNotifications) {
-                showNotification(`Загружаем существующие данные (${data.count} записей)...`, 'info');
+                if (!DISABLE_DB_NOTIFICATIONS) {
+                    showNotification(`Загружаем существующие данные (${data.count} записей)...`, 'info');
+                }
             }
             
             // Загружаем таблицу
@@ -852,7 +989,9 @@ async function checkExistingData(options = {}) {
             // startAutoRefresh();
             
             if (showNotifications) {
-                showNotification(`Загружено ${data.count} записей из базы данных`, 'success');
+                if (!DISABLE_DB_NOTIFICATIONS) {
+                    showNotification(`Загружено ${data.count} записей из базы данных`, 'success');
+                }
             }
         } else {
             console.log('В базе данных нет записей');
@@ -892,6 +1031,7 @@ async function checkAnalysisFiles() {
 document.addEventListener('DOMContentLoaded', function() {
     setupDragAndDrop();
     setupFileInput();
+    setupCombinedFileInput();
     
     // Инициализация вкладок
     document.querySelectorAll('.tab').forEach(tab => {
@@ -1493,7 +1633,7 @@ async function loadAnalysisDataFromDB(options = {}) {
         const checkData = await checkResponse.json();
         
         if (!checkData.has_data) {
-            if (showNotifications) {
+            if (showNotifications && !DISABLE_DB_NOTIFICATIONS) {
                 showNotification('В базе данных нет сохраненных анализов', 'warning');
             }
             displayAnalysisTableFromDB([]);
@@ -1535,7 +1675,7 @@ async function loadAnalysisDataFromDB(options = {}) {
                 await autoLoadCharts();
             }
             
-            if (showNotifications) {
+            if (showNotifications && !DISABLE_DB_NOTIFICATIONS) {
                 showNotification('Данные успешно загружены из базы данных', 'success');
             }
             return true;
@@ -1545,7 +1685,7 @@ async function loadAnalysisDataFromDB(options = {}) {
         
     } catch (error) {
         console.error('Ошибка загрузки данных анализа из БД:', error);
-        if (showNotifications) {
+        if (showNotifications && !DISABLE_DB_NOTIFICATIONS) {
             showNotification('Ошибка загрузки данных из базы данных', 'error');
         }
         return false;

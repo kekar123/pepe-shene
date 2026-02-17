@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Общий отчет</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+    <div class="header-inner">
+        <a class="penis" href="#"><h1>SKLAD</h1></a>
+        <nav class="header-links">
+            <a href="{{ url_for('index') }}">Поставка</a>
+            <a href="{{ url_for('remove_page') }}">Отгрузка</a>
+            <a href="#">Склад</a>
+            <a href="#">Этикетки</a>
+            <a href="{{ url_for('combined_page') }}" style="background-color: #3d4170; border-radius: 15px; padding: 10px 15px;">Общий отчет</a>
+        </nav>
+    </div>
+</header>
+
+<!-- Уведомления -->
+<div id="notification" class="notification">
+    <span id="notification-text"></span>
+    <button class="close-notification" onclick="hideNotification()" aria-label="Закрыть">×</button>
+    <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill"></div>
+    </div>
+</div>
+
+<main class="page-container">
+    <div class="container">
+        <div class="upload-section">
+            <div class="upload-title">Общий отчет (несколько файлов)</div>
+            <div class="upload-area" id="combinedDropArea">
+                <div class="upload-icon">📎</div>
+                <div class="upload-text">Выберите все файлы для общего отчета</div>
+                <input type="file" id="combinedFileInput" class="file-input" accept=".xls,.xlsx" multiple>
+                <button class="upload-button" onclick="document.getElementById('combinedFileInput').click()">
+                    Выбрать файлы
+                </button>
+                <div class="upload-note">
+                    <strong>Нужные файлы:</strong> Движения стока, Линии пикинга, Основные данные (Article Master Data),
+                    ABC анализ, Проверка заказано - собрано, PUD отчет по стоку
+                </div>
+                <div class="upload-note">
+                    <a id="combinedReportDownload" class="upload-button" style="display: none;" download>
+                        Скачать общий отчет
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<section class="results-section">
+    <main class="result-container">
+        <h2>Общий отчет</h2>
+        <div class="table-container">
+            <div class="table-wrapper">
+                <table id="combinedReportTable">
+                    <thead>
+                        <tr>
+                            <th>АРТИКУЛ</th>
+                            <th>НАЗВАНИЕ</th>
+                            <th>Аллея пикинг</th>
+                            <th>Место пикинг</th>
+                            <th>MAX PICK</th>
+                            <th>Кол-во палет реапро</th>
+                            <th>Кол-во коробов реапро</th>
+                            <th>Кол-во штук Реапро</th>
+                            <th>Кол-во заказов</th>
+                            <th>Дата последнего выхода</th>
+                            <th>Выход в коробах из пикинга</th>
+                            <th>Выход в штуках</th>
+                            <th>Палетизация</th>
+                            <th>PCB</th>
+                            <th>ABC класс</th>
+                            <th>Стокаж</th>
+                            <th>Кол-во линий</th>
+                            <th>Процент (реаппро)</th>
+                            <th>Популярность (реаппро)</th>
+                            <th>Процент (линии)</th>
+                            <th>Популярность (линии)</th>
+                            <th>Мертвый сток</th>
+                        </tr>
+                    </thead>
+                    <tbody id="combinedTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</section>
+
+<footer class="footer">
+    <div class="footer-inner">
+        ©2025 SKLAD | Проект Ногинского колледжа
+    </div>
+</footer>
+
+<script>
+    window.DISABLE_CHART_NOTIFICATIONS = true;
+    window.DISABLE_DB_NOTIFICATIONS = true;
+</script>
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
