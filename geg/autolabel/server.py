@@ -9,30 +9,32 @@ import time
 import io
 import urllib.parse
 from urllib.parse import urlparse, parse_qs
+import re
 
 # Получаем абсолютный путь к текущей директории
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 print(f"📁 Текущая директория: {BASE_DIR}")
 
 # Добавляем текущую директорию в путь
-sys.path.append(BASE_DIR)
+sys.path.insert(0, BASE_DIR)
 
-# Импортируем ВСЕ функции генерации из label_generator
+# Импортируем ТОЛЬКО нужные функции из label_generator
 try:
     from label_generator import (
-        ContentProcessor, 
-        SizeCalculator, 
-        LabelDesigner,
         parse_product_text,
         generate_label_image,
-        slugify_filename,
-        get_variant_features,
-        check_label_compliance
+        slugify_filename
     )
     print("✅ Модули label_generator загружены")
+    print(f"   - parse_product_text")
+    print(f"   - generate_label_image")
+    print(f"   - slugify_filename")
 except ImportError as e:
     print(f"❌ Ошибка импорта: {e}")
-    print("ℹ️ Убедитесь, что label_generator.py находится в той же папке")
+    print(f"🔍 Поиск в: {BASE_DIR}")
+    print("📋 Содержимое папки:")
+    for file in os.listdir(BASE_DIR):
+        print(f"   - {file}")
     sys.exit(1)
 
 PORT = 8000
@@ -66,6 +68,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 with open(filepath, 'r', encoding='utf-8') as f:
                     content = f.read()
                 
+                # Добавляем мета-теги для отключения кэширования
                 meta_tags = '''
                 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
                 <meta http-equiv="Pragma" content="no-cache">
@@ -81,25 +84,38 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 self.send_error(404, "index.html not found")
             return
         
-        # API эндпоинты
+        # API статус
         elif self.path == '/api/status':
             self.send_json_response({
                 'status': 'running',
-                'version': '2.0',
+                'version': '3.0',
                 'timestamp': time.time(),
                 'message': 'LabelFlow API работает'
             })
             return
         
         # ЭКСПОРТ ЭТИКЕТКИ
+        elif self.path.startswith('/api/export/custom'):
+            try:
+                self.handle_custom_export()
+            except Exception as e:
+                print(f"❌ Ошибка экспорта: {e}")
+                import traceback
+                traceback.print_exc()
+                self.send_error(500, f"Export failed: {str(e)}")
+            return
+        
+        # ЭКСПОРТ ПО ID
         elif self.path.startswith('/api/export/'):
             try:
-                # Извлекаем ID варианта из URL
                 path_parts = self.path.split('/')
                 if len(path_parts) >= 4:
                     variant_id_str = path_parts[3].split('?')[0]
-                    variant_id = int(variant_id_str)
-                    self.handle_export(variant_id)
+                    if variant_id_str.isdigit():
+                        variant_id = int(variant_id_str)
+                        self.handle_export_by_id(variant_id)
+                    else:
+                        self.handle_custom_export()
                 else:
                     self.send_error(400, "Invalid export URL")
             except Exception as e:
@@ -111,7 +127,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         
         # Статические файлы
         else:
-            filepath = os.path.join(BASE_DIR, self.path[1:].split('?')[0])
+            file_path = self.path.split('?')[0].lstrip('/')
+            filepath = os.path.join(BASE_DIR, file_path)
+            
             if os.path.exists(filepath) and os.path.isfile(filepath):
                 self.serve_static_file(filepath)
                 return
@@ -176,137 +194,46 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(json.dumps(data, ensure_ascii=False).encode('utf-8'))
     
-    # ========== ОБРАБОТЧИКИ API ==========
+    # ========== ОБРАБОТЧИК ЭКСПОРТА ==========
     
-    def handle_generate(self, data):
-        """Генерация этикеток - метаданные"""
-        user_text = data.get('text', '')
-        print(f"📝 Получен текст: {user_text[:50]}...")
+    def handle_custom_export(self):
+        """Экспорт этикетки с пользовательскими размерами"""
+        print(f"\n📤 ЭКСПОРТ ПОЛЬЗОВАТЕЛЬСКОЙ ЭТИКЕТКИ")
+        print("=" * 50)
         
-        if not user_text:
-            return {'error': 'No text provided', 'success': False}
-        
-        try:
-            # Используем функцию парсинга из label_generator
-            parsed_data = parse_product_text(user_text)
-            
-            variants = []
-            sizes = [
-                {'id': 1, 'name': 'Широкий формат', 'width': 16, 'height': 9},
-                {'id': 2, 'name': 'Минимализм', 'width': 10, 'height': 7}
-            ]
-            
-            for i, size in enumerate(sizes):
-                variant = {
-                    'id': size['id'],
-                    'name': size['name'],
-                    'size': f"{size['width']} × {size['height']} см",
-                    'width': size['width'],
-                    'height': size['height'],
-                    'features': get_variant_features(size['name'], parsed_data)
-                }
-                variants.append(variant)
-                print(f"✅ Создан вариант: {variant['name']}")
-            
-            return {
-                'success': True,
-                'product_name': parsed_data['product_name'],
-                'variants': variants
-            }
-            
-        except Exception as e:
-            print(f"❌ Ошибка генерации: {e}")
-            import traceback
-            traceback.print_exc()
-            return {'error': str(e), 'success': False}
-    
-    def handle_export(self, variant_id):
-        """Экспорт этикетки с ПОЛНЫМИ данными товара"""
-        print(f"\n📤 ЭКСПОРТ ВАРИАНТА #{variant_id}")
-        
-        # Получаем данные товара из query параметров
+        # Получаем данные из query параметров
         parsed_url = urlparse(self.path)
         query = parse_qs(parsed_url.query)
         
-        # ========== ПОЛНЫЙ ПАРСИНГ ВСЕХ ПОЛЕЙ ==========
+        print("📋 ПОЛУЧЕННЫЕ ПАРАМЕТРЫ:")
+        for key in query:
+            value = query[key][0]
+            if len(value) > 100:
+                print(f"   {key}: {value[:100]}...")
+            else:
+                print(f"   {key}: {value}")
+        print("=" * 50)
+        
+        # Проверяем, это предпросмотр или скачивание
+        is_preview = self._get_query_param(query, 'preview', 'false').lower() == 'true'
+        
+        # Получаем данные напрямую из параметров
         product_data = {
-            # ОСНОВНОЕ
             'product_name': self._get_query_param(query, 'product_name', 'Товар'),
             'product_full_name': self._get_query_param(query, 'product_full_name', ''),
-            'product_subtitle': self._get_query_param(query, 'product_subtitle', ''),
-            
-            # СОСТАВ И ПИЩЕВАЯ ЦЕННОСТЬ
             'ingredients': self._get_query_param(query, 'ingredients', ''),
-            'nutrition': self._get_query_param(query, 'nutrition', ''),
-            'nutrition_facts': {},
-            'energy_value': self._get_query_param(query, 'energy_value', ''),
-            'energy_value_kj': self._get_query_param(query, 'energy_value_kj', ''),
-            
-            # ВЕС И ОБЪЕМ
+            'country_of_origin': self._get_query_param(query, 'country', ''),
             'net_weight': self._get_query_param(query, 'net_weight', ''),
-            'volume': self._get_query_param(query, 'volume', ''),
-            
-            # СРОКИ И ДАТЫ
-            'expiry_date': self._get_query_param(query, 'expiry_date', ''),
-            'manufacture_date': self._get_query_param(query, 'manufacture_date', ''),
-            'shelf_life': self._get_query_param(query, 'shelf_life', ''),
-            'shelf_life_days': self._get_query_param(query, 'shelf_life_days', ''),
-            'after_opening': self._get_query_param(query, 'after_opening', ''),
-            
-            # УСЛОВИЯ ХРАНЕНИЯ
-            'storage_conditions': self._get_query_param(query, 'storage_conditions', ''),
-            'storage_temp': self._get_query_param(query, 'storage_temp', ''),
-            
-            # ПРОИЗВОДИТЕЛЬ
             'manufacturer': self._get_query_param(query, 'manufacturer', ''),
-            'manufacturer_address': self._get_query_param(query, 'manufacturer_address', ''),
-            'manufacturer_full': self._get_query_param(query, 'manufacturer_full', ''),
-            
-            # ИМПОРТЕР
             'importer': self._get_query_param(query, 'importer', ''),
-            'importer_address': self._get_query_param(query, 'importer_address', ''),
-            'importer_full': self._get_query_param(query, 'importer_full', ''),
-            
-            # СТРАНА
-            'country_of_origin': self._get_query_param(query, 'country_of_origin', 
-                                                       self._get_query_param(query, 'country', '')),
-            'country_code': self._get_query_param(query, 'country_code', ''),
-            'customs_union': self._get_query_param(query, 'customs_union', 'false').lower() == 'true',
-            'eaeu': self._get_query_param(query, 'eaeu', 'false').lower() == 'true',
-            
-            # СЕРТИФИКАЦИЯ
-            'certification': self._get_query_param_list(query, 'certification'),
-            'technical_regulations': self._get_query_param_list(query, 'technical_regulations'),
-            'tr_codes': self._get_query_param_list(query, 'tr_codes'),
-            
-            # МАРКИРОВКА
             'barcode': self._get_query_param(query, 'barcode', ''),
-            'ean13': self._get_query_param(query, 'ean13', ''),
-            'requires_qr': self._get_query_param(query, 'qr_required', 'false').lower() == 'true',
-            'qr_data': self._get_query_param(query, 'qr_data', 
-                                             self._get_query_param(query, 'qr', '')),
-            'honest_sign_barcode': self._get_query_param(query, 'honest_sign_barcode', ''),
-            
-            # ИКОНКИ И ЗНАКИ
-            'is_recyclable': self._get_query_param(query, 'recycle', 'false').lower() == 'true',
-            'recycle_code': self._get_query_param(query, 'recycle_code', ''),
-            'requires_gost': self._get_query_param(query, 'gost', 'false').lower() == 'true',
-            'gost_numbers': self._get_query_param_list(query, 'gost_numbers'),
-            
-            # ИНСТРУКЦИИ
-            'usage_instructions': self._get_query_param(query, 'usage_instructions', ''),
-            'dilution': self._get_query_param(query, 'dilution', ''),
-            'preparation': self._get_query_param(query, 'preparation', ''),
-            
-            # ПРЕДУПРЕЖДЕНИЯ
-            'warnings': self._get_query_param_list(query, 'warnings'),
-            'allergens': self._get_query_param_list(query, 'allergens'),
-            
-            # ДОПОЛНИТЕЛЬНО
-            'batch_number': self._get_query_param(query, 'batch_number', ''),
-            'package_type': self._get_query_param(query, 'package_type', ''),
-            'serving_size': self._get_query_param(query, 'serving_size', ''),
-            'servings_per_package': self._get_query_param(query, 'servings_per_package', '')
+            'requires_qr': self._get_query_param(query, 'requires_qr', 'false').lower() == 'true',
+            'requires_gost': self._get_query_param(query, 'requires_gost', 'false').lower() == 'true',
+            'is_recyclable': self._get_query_param(query, 'is_recyclable', 'false').lower() == 'true',
+            'nutrition': self._get_query_param(query, 'nutrition', ''),
+            'energy_value': self._get_query_param(query, 'energy', ''),
+            'shelf_life': self._get_query_param(query, 'shelf_life', ''),
+            'expiry_date': self._get_query_param(query, 'expiry', '')
         }
         
         # Декодируем URL-encoded строки
@@ -316,60 +243,160 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     product_data[key] = urllib.parse.unquote(value)
                 except:
                     pass
-            elif isinstance(value, list):
-                decoded_list = []
-                for item in value:
-                    try:
-                        decoded_list.append(urllib.parse.unquote(item))
-                    except:
-                        decoded_list.append(item)
-                product_data[key] = decoded_list
         
-        print(f"📦 ЭКСПОРТ ПОЛНЫХ ДАННЫХ:")
-        print(f"   Товар: {product_data['product_name']}")
-        print(f"   Состав: {product_data['ingredients'][:50] if product_data['ingredients'] else 'Н/Д'}...")
-        print(f"   Производитель: {product_data['manufacturer'] or 'Н/Д'}")
-        print(f"   Импортер: {product_data['importer'] or 'Н/Д'}")
-        print(f"   Срок годности: {product_data['expiry_date'] or 'Н/Д'}")
-        print(f"   QR: {product_data['requires_qr']}")
-        print(f"   Переработка: {product_data['is_recyclable']}")
-        print(f"   ГОСТ: {product_data['requires_gost']}")
+        # Получаем размеры (в СМ)
+        try:
+            width_cm = float(self._get_query_param(query, 'width', '46'))
+            height_cm = float(self._get_query_param(query, 'height', '46'))
+        except ValueError:
+            width_cm = 46
+            height_cm = 46
         
-        # Определяем размер этикетки по ID варианта
-        sizes = {
-            1: {'name': 'wide', 'display_name': 'Широкий формат', 'width': 16, 'height': 9},
-            2: {'name': 'minimal', 'display_name': 'Минимализм', 'width': 10, 'height': 7}
-        }
+        # Получаем номер дизайна
+        design_id = int(self._get_query_param(query, 'design', '0'))
         
-        size = sizes.get(variant_id, sizes[1])
-        print(f"   Формат: {size['width']}x{size['height']} см ({size['display_name']})")
+        print(f"\n📦 ДАННЫЕ ДЛЯ ГЕНЕРАЦИИ:")
+        print(f"   product_name: {product_data.get('product_name', 'Н/Д')}")
+        print(f"   ingredients: {product_data.get('ingredients', 'Н/Д')[:50]}")
+        print(f"   country_of_origin: {product_data.get('country_of_origin', 'Н/Д')}")
+        print(f"   net_weight: {product_data.get('net_weight', 'Н/Д')}")
+        print(f"   manufacturer: {product_data.get('manufacturer', 'Н/Д')}")
+        print(f"   importer: {product_data.get('importer', 'Н/Д')}")
+        print(f"   barcode: {product_data.get('barcode', 'Н/Д')}")
+        print(f"   Размер: {width_cm}×{height_cm} см")
+        print("=" * 50)
         
         try:
-            # ВАЖНО: Передаем ВСЕ данные в генератор
-            image = generate_label_image(product_data, size['width'], size['height'])
+            # Генерируем этикетку
+            image = generate_label_image(product_data, width_cm, height_cm)
             
             # Сохраняем в BytesIO
             img_io = io.BytesIO()
-            image.save(img_io, format='PNG', dpi=(300, 300))
+            
+            # Для предпросмотра используем меньшее качество
+            if is_preview:
+                image.save(img_io, format='PNG', dpi=(72, 72), optimize=True)
+            else:
+                image.save(img_io, format='PNG', dpi=(300, 300))
+            
             img_io.seek(0)
             
-            # Создаем имя файла
-            timestamp = int(time.time())
-            safe_name = slugify_filename(product_data['product_name'] or 'product')
-            filename = f"labelflow_{safe_name}_{timestamp}.png"
-            
-            self.send_response(200)
-            self.send_header('Content-Type', 'image/png')
-            self.send_header('Content-Disposition', f'attachment; filename="{filename}"')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate')
-            self.send_header('Pragma', 'no-cache')
-            self.send_header('Expires', '0')
-            self.end_headers()
+            if is_preview:
+                self.send_response(200)
+                self.send_header('Content-Type', 'image/png')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Cache-Control', 'public, max-age=30')
+                self.end_headers()
+            else:
+                timestamp = int(time.time())
+                safe_name = slugify_filename(product_data.get('product_name', 'product'))
+                filename = f"labelflow_{safe_name}_{int(width_cm)}x{int(height_cm)}_cm_{timestamp}.png"
+                
+                self.send_response(200)
+                self.send_header('Content-Type', 'image/png')
+                self.send_header('Content-Disposition', f'attachment; filename="{filename}"')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate')
+                self.send_header('Pragma', 'no-cache')
+                self.send_header('Expires', '0')
+                self.end_headers()
             
             self.wfile.write(img_io.getvalue())
-            print(f"✅ УСПЕШНО экспортирован: {filename}")
-            print(f"   Размер файла: {len(img_io.getvalue())} байт")
+            
+            if is_preview:
+                print(f"✅ Отправлен предпросмотр для дизайна #{design_id}")
+            else:
+                print(f"✅ УСПЕШНО экспортирован: {filename}")
+            
+        except Exception as e:
+            print(f"❌ Ошибка генерации: {e}")
+            import traceback
+            traceback.print_exc()
+            self.send_error(500, f"Export failed: {str(e)}")
+    
+    def handle_export_by_id(self, variant_id):
+        """Экспорт этикетки по ID"""
+        print(f"\n📤 ЭКСПОРТ ВАРИАНТА #{variant_id}")
+        
+        parsed_url = urlparse(self.path)
+        query = parse_qs(parsed_url.query)
+        
+        is_preview = self._get_query_param(query, 'preview', 'false').lower() == 'true'
+        
+        product_data = {
+            'product_name': self._get_query_param(query, 'product_name', 'Товар'),
+            'product_full_name': self._get_query_param(query, 'product_full_name', ''),
+            'ingredients': self._get_query_param(query, 'ingredients', ''),
+            'country_of_origin': self._get_query_param(query, 'country', ''),
+            'net_weight': self._get_query_param(query, 'net_weight', ''),
+            'manufacturer': self._get_query_param(query, 'manufacturer', ''),
+            'importer': self._get_query_param(query, 'importer', ''),
+            'requires_qr': self._get_query_param(query, 'requires_qr', 'false').lower() == 'true',
+            'requires_gost': self._get_query_param(query, 'requires_gost', 'false').lower() == 'true',
+            'is_recyclable': self._get_query_param(query, 'is_recyclable', 'false').lower() == 'true'
+        }
+        
+        # Размеры для старых вариантов (в СМ)
+        sizes = {
+            0: {'width': 46, 'height': 46},
+            1: {'width': 48, 'height': 30},
+            2: {'width': 40, 'height': 20},
+            3: {'width': 30, 'height': 15},
+            4: {'width': 43, 'height': 63},
+            5: {'width': 22, 'height': 22},
+            6: {'width': 99.5, 'height': 99.5},
+            7: {'width': 20, 'height': 15},
+            8: {'width': 17, 'height': 15},
+            9: {'width': 16, 'height': 16},
+            10: {'width': 58, 'height': 60},
+            11: {'width': 40, 'height': 15},
+            12: {'width': 55, 'height': 60},
+            13: {'width': 50, 'height': 70}
+        }
+        
+        size = sizes.get(variant_id, sizes[0])
+        
+        for key, value in product_data.items():
+            if isinstance(value, str):
+                try:
+                    product_data[key] = urllib.parse.unquote(value)
+                except:
+                    pass
+        
+        try:
+            image = generate_label_image(product_data, size['width'], size['height'])
+            
+            img_io = io.BytesIO()
+            
+            if is_preview:
+                image.save(img_io, format='PNG', dpi=(72, 72), optimize=True)
+            else:
+                image.save(img_io, format='PNG', dpi=(300, 300))
+            
+            img_io.seek(0)
+            
+            if is_preview:
+                self.send_response(200)
+                self.send_header('Content-Type', 'image/png')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Cache-Control', 'public, max-age=30')
+                self.end_headers()
+            else:
+                timestamp = int(time.time())
+                safe_name = slugify_filename(product_data.get('product_name', 'product'))
+                filename = f"labelflow_{safe_name}_{size['width']}x{size['height']}_cm_{timestamp}.png"
+                
+                self.send_response(200)
+                self.send_header('Content-Type', 'image/png')
+                self.send_header('Content-Disposition', f'attachment; filename="{filename}"')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate')
+                self.send_header('Pragma', 'no-cache')
+                self.send_header('Expires', '0')
+                self.end_headers()
+            
+            self.wfile.write(img_io.getvalue())
+            print(f"✅ УСПЕШНО экспортирован вариант #{variant_id}")
             
         except Exception as e:
             print(f"❌ Ошибка экспорта: {e}")
@@ -377,31 +404,43 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             traceback.print_exc()
             self.send_error(500, f"Export failed: {str(e)}")
     
-    # ========== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ==========
+    def handle_generate(self, data):
+        """Генерация метаданных для предпросмотра"""
+        user_text = data.get('text', '')
+        print(f"📝 Получен текст для парсинга: {user_text[:100]}...")
+        
+        if not user_text:
+            return {'error': 'No text provided', 'success': False}
+        
+        try:
+            parsed_data = parse_product_text(user_text)
+            
+            return {
+                'success': True,
+                'product_name': parsed_data.get('product_name', 'Товар'),
+                'product_full_name': parsed_data.get('product_full_name', ''),
+                'ingredients': parsed_data.get('ingredients', ''),
+                'has_qr': parsed_data.get('requires_qr', False),
+                'has_recycle': parsed_data.get('is_recyclable', False),
+                'has_gost': parsed_data.get('requires_gost', False)
+            }
+            
+        except Exception as e:
+            print(f"❌ Ошибка генерации: {e}")
+            import traceback
+            traceback.print_exc()
+            return {'error': str(e), 'success': False}
     
     def _get_query_param(self, query, key, default=''):
         """Безопасное получение параметра из query"""
         if key in query and query[key] and len(query[key]) > 0:
             return query[key][0]
         return default
-    
-    def _get_query_param_list(self, query, key):
-        """Получение списка параметров из query"""
-        if key in query and query[key]:
-            # Разделяем по | если это закодированный список
-            if len(query[key]) == 1 and '|' in query[key][0]:
-                return query[key][0].split('|')
-            return query[key]
-        return []
 
-# Запуск сервера
+
 def main():
     print("=" * 70)
-    print("🚀 LabelFlow Server v2.0 - ПОЛНАЯ ИНФОРМАЦИЯ")
-    print("=" * 70)
-    print("✅ Файлы сохраняются ТОЛЬКО при экспорте")
-    print("✅ Поддерживаются ЛЮБЫЕ товары")
-    print("✅ Полный парсинг состава, сроков, производителей")
+    print("🚀 LabelFlow Server v3.0 - ИСПРАВЛЕННАЯ ВЕРСИЯ")
     print("=" * 70)
     print(f"📁 Папка проекта: {BASE_DIR}")
     print(f"🌐 Сервер: http://localhost:{PORT}")
@@ -420,5 +459,4 @@ def main():
         print(f"\n❌ Ошибка запуска сервера: {e}")
 
 if __name__ == '__main__':
-    # ВАЖНО: Здесь ТОЛЬКО вызов main() без argparse!
     main()

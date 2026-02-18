@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LabelFlow AI - Предпросмотр этикеток</title>
+    <title>LabelFlow AI - Конструктор этикеток</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary: #2563eb;
@@ -244,29 +244,63 @@
             color: var(--primary);
         }
 
-        .label-variants {
+        .size-selector {
+            margin-bottom: 16px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+            scrollbar-width: thin;
+        }
+
+        .size-chips {
             display: flex;
-            gap: 20px;
-            flex: 1;
+            gap: 8px;
+            min-width: min-content;
+        }
+
+        .size-chip {
+            padding: 8px 16px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text);
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .size-chip:hover {
+            border-color: var(--primary);
+            background: rgba(37, 99, 235, 0.05);
+        }
+
+        .size-chip.selected {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .label-variants {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
             overflow-y: auto;
             padding-right: 10px;
+            max-height: 100%;
         }
 
         .label-variant {
             background: var(--surface);
             border: 2px solid transparent;
             border-radius: var(--radius);
-            padding: 24px;
+            padding: 20px;
             transition: all 0.2s;
             cursor: pointer;
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 16px;
             box-shadow: var(--shadow);
-            min-height: 400px;
-            flex: 1;
-            min-width: 45%;
-            max-width: 48%;
         }
 
         .label-variant:hover {
@@ -318,7 +352,7 @@
 
         .preview-container {
             flex: 1;
-            min-height: 200px;
+            min-height: 160px;
             background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
             border-radius: 8px;
             display: flex;
@@ -326,109 +360,76 @@
             justify-content: center;
             position: relative;
             border: 1px solid var(--border);
-        }
-
-        .label-mockup {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            padding: 20px;
-            gap: 12px;
-            position: relative;
-            background: white;
-            border-radius: 6px;
-            box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
-        }
-
-        .label-mockup.size-large {
-            width: 280px;
-            height: 157px;
-            font-size: 11px;
-        }
-
-        .label-mockup.size-small {
-            width: 180px;
-            height: 105px;
-            font-size: 9px;
-        }
-
-        .mockup-title {
-            font-weight: 700;
-            text-transform: uppercase;
-            color: var(--text);
-            line-height: 1.3;
-            max-height: 50%;
             overflow: hidden;
-            word-wrap: break-word;
         }
 
-        .mockup-details {
-            color: var(--text-light);
-            line-height: 1.4;
-            font-size: 0.9em;
+        .preview-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
-        .mockup-qr {
+        .preview-loading {
             position: absolute;
-            width: 24px;
-            height: 24px;
-            background: repeating-conic-gradient(#000 0% 25%, #fff 0% 50%) 50% / 4px 4px;
-            border: 1px solid rgba(0,0,0,0.2);
-        }
-
-        .mockup-icon {
-            position: absolute;
-            width: 16px;
-            height: 16px;
-            background: var(--primary);
-            border-radius: 2px;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.8);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 8px;
-            color: white;
+            font-size: 12px;
+            color: var(--text-light);
         }
 
         .variant-stats {
             display: flex;
-            gap: 16px;
-            font-size: 12px;
+            gap: 12px;
+            font-size: 11px;
             color: var(--text-light);
         }
 
         .stat-item {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 4px;
         }
 
         .select-btn {
-            padding: 12px;
+            padding: 10px;
             background: var(--primary);
             color: white;
             border: none;
             border-radius: 8px;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 500;
             cursor: pointer;
             transition: background 0.2s;
             margin-top: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
         }
 
         .select-btn:hover {
             background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
         }
 
-        .details-panel {
-            flex: 0 0 300px;
+        .editor-panel {
+            flex: 0 0 320px;
             display: flex;
             flex-direction: column;
             gap: 20px;
             overflow-y: auto;
         }
 
-        .details-section {
+        .editor-section {
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: var(--radius);
@@ -436,7 +437,7 @@
             box-shadow: var(--shadow);
         }
 
-        .details-section h3 {
+        .editor-section h3 {
             font-size: 14px;
             font-weight: 500;
             color: var(--text-light);
@@ -446,92 +447,145 @@
             gap: 8px;
         }
 
-        .dimension-inputs {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
+        .editor-tabs {
+            display: flex;
+            gap: 8px;
             margin-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
         }
 
-        .dimension-input label {
+        .editor-tab {
+            padding: 8px 12px;
+            font-size: 13px;
+            background: none;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            color: var(--text-light);
+            transition: all 0.2s;
+        }
+
+        .editor-tab:hover {
+            background: var(--surface-alt);
+            color: var(--text);
+        }
+
+        .editor-tab.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
             display: block;
+        }
+
+        .control-group {
+            margin-bottom: 16px;
+        }
+
+        .control-label {
+            display: flex;
+            justify-content: space-between;
             font-size: 12px;
             color: var(--text-light);
             margin-bottom: 6px;
         }
 
-        .dimension-input input {
+        .control-value {
+            font-weight: 500;
+            color: var(--primary);
+        }
+
+        input[type="range"] {
             width: 100%;
-            padding: 10px;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            font-family: 'Inter', sans-serif;
-            font-size: 14px;
-            color: var(--text);
-            text-align: center;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            -webkit-appearance: none;
+            appearance: none;
         }
 
-        .dimension-input input:focus {
-            outline: none;
-            border-color: var(--primary);
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--primary);
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
-        .optimization-progress {
-            margin-top: 20px;
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: var(--primary);
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
-        .progress-header {
+        .toggle-switch {
             display: flex;
+            align-items: center;
             justify-content: space-between;
-            margin-bottom: 8px;
-            font-size: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .toggle-switch:last-child {
+            border-bottom: none;
+        }
+
+        .toggle-label {
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toggle-label i {
+            width: 20px;
             color: var(--text-light);
         }
 
-        .progress-bar {
-            height: 4px;
-            background: var(--surface-alt);
-            border-radius: 2px;
-            overflow: hidden;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--primary), #3b82f6);
-            border-radius: 2px;
-            transition: width 0.3s ease;
-        }
-
-        .qr-section {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        .qr-upload {
-            padding: 16px;
-            border: 2px dashed var(--border);
-            border-radius: 8px;
-            text-align: center;
+        .toggle-input {
+            position: relative;
+            width: 40px;
+            height: 20px;
+            background: var(--border);
+            border-radius: 20px;
+            -webkit-appearance: none;
+            appearance: none;
             cursor: pointer;
             transition: all 0.2s;
         }
 
-        .qr-upload:hover {
-            border-color: var(--primary);
-            background: rgba(37, 99, 235, 0.02);
+        .toggle-input:checked {
+            background: var(--primary);
         }
 
-        .qr-upload i {
-            font-size: 24px;
-            color: var(--text-light);
-            margin-bottom: 8px;
+        .toggle-input::before {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: all 0.2s;
         }
 
-        .qr-upload span {
-            display: block;
-            font-size: 13px;
-            color: var(--text-light);
+        .toggle-input:checked::before {
+            left: 22px;
         }
 
         .export-buttons {
@@ -593,6 +647,18 @@
             gap: 16px;
         }
 
+        .char-counter {
+            position: absolute;
+            bottom: 80px;
+            right: 40px;
+            font-size: 11px;
+            color: var(--text-light);
+            background: rgba(255,255,255,0.9);
+            padding: 2px 8px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -604,6 +670,7 @@
 
         ::-webkit-scrollbar {
             width: 4px;
+            height: 4px;
         }
 
         ::-webkit-scrollbar-track {
@@ -618,71 +685,34 @@
         ::-webkit-scrollbar-thumb:hover {
             background: var(--text-light);
         }
-        
-        .preview-panel {
-            transition: opacity 0.3s ease;
-        }
 
-        .select-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            transition: all 0.2s ease;
-        }
-
-        .select-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
-        }
-
-        .label-variant.selected {
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
-            50% { box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.05); }
-            100% { box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
-        }
-
-        .empty-preview {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 16px;
-            padding: 40px;
-            color: var(--text-light);
-            text-align: center;
-        }
-
-        .empty-preview i {
-            font-size: 48px;
-            color: var(--border);
-        }
-
-        .empty-preview h3 {
-            font-size: 16px;
-            font-weight: 500;
-            margin-bottom: 8px;
-        }
-
-        .empty-preview p {
+        .refresh-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--primary);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 30px;
             font-size: 13px;
-            color: var(--text-light);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+            z-index: 1000;
+            animation: slideIn 0.3s;
         }
 
-        .char-counter {
-            position: absolute;
-            bottom: 80px;
-            right: 40px;
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .debounce-indicator {
             font-size: 11px;
             color: var(--text-light);
-            background: rgba(255,255,255,0.9);
-            padding: 2px 8px;
-            border-radius: 12px;
-            border: 1px solid var(--border);
+            margin-top: 4px;
+            text-align: right;
         }
     </style>
 </head>
@@ -691,46 +721,33 @@
         <div class="input-panel">
             <div class="panel-header">
                 <h2>LabelFlow AI</h2>
-                <span class="badge">v1.0</span>
+                <span class="badge">v3.0</span>
             </div>
 
             <div class="input-container">
                 <div class="input-header">
-                    <h3>Опишите этикетку <span style="font-weight: 400; color: var(--text-light);">(предпросмотр обновляется автоматически)</span></h3>
+                    <h3>Опишите этикетку</h3>
                 </div>
                 
                 <textarea id="ai-input" 
-                          placeholder="Просто опишите что нужно... Предпросмотр обновится сразу при вводе!
+                          placeholder="Опишите товар... Предпросмотр обновится автоматически
 
 Пример:
 Товар: Апельсиновый сок 200мл
 Страна: Бразилия
 Импортёр: ООО &quot;Фруктовый мир&quot;
-Знак переработки
-Упаковка: 12×4см">Товар: Ягодный микс
+Знак переработки">Товар: Ягодный микс
 Страна: Германия
 Требуется QR-код и знак переработки
 Требуется: все значки ГОСТ
-Текст заказчика:
-Наименование продукта: Концентрат для напитка "Ягодный микс" в порошке.
-Состав продукта: сахар, мальтодекстрин, концентрированный сок черной смородины (8%), концентрированный сок малины (5%), регуляторы кислотности (лимонная кислота, цитрат натрия), натуральные ароматизаторы (малина, черная смородина), витамин С (аскорбиновая кислота), краситель: концентрат черной моркови.
-Пищевая ценность на 100 г продукта: белки 0,5 г, жиры 0 г, углеводы 94 г, из них сахара 85 г.
-Энергетическая ценность: 1600 кДж / 380 ккал.
-Способ применения: 2 чайные ложки (около 10 г) продукта растворить в 200 мл холодной или горячей воды.
-Масса нетто: 250 г.
-Срок годности: 24 месяца.
-Дата изготовления: 10.05.2024.
-Дата окончания срока годности: 10.05.2026.
-Условия хранения: хранить в сухом прохладном месте, избегая прямых солнечных лучей.
-После вскрытия упаковки употребить в течение 6 недель.
-Изготовитель: "Sunny Foods GmbH", Германия.
-Адрес изготовителя: Robert-Bosch-Strasse 10, 61169 Friedberg, Германия.
-Импортер в РФ/ЕАЭС: ООО "ВкусМир", 123456, Россия, г. Москва, ул. Ленина, д. 1, офис 15.
-Страна происхождения: Германия.
-Таможенный союз.
-Продукт соответствует требованиям технического регламента Таможенного союза ТР ТС 021/2011 "О безопасности пищевой продукции", ТР ТС 022/2011 "Пищевая продукция в части ее маркировки".
-Штрихкод продукта: 4 012345 678900.
-Не является лекарственным средством.</textarea>
+Состав: сахар, мальтодекстрин, сок черной смородины (8%), сок малины (5%)
+Пищевая ценность: белки 0,5 г, жиры 0 г, углеводы 94 г
+Энергетическая ценность: 380 ккал
+Масса нетто: 250 г
+Срок годности: 24 месяца
+Изготовитель: Sunny Foods GmbH, Германия
+Импортер: ООО "ВкусМир", Москва
+Штрихкод: 4012345678900</textarea>
                 
                 <div class="char-counter" id="char-counter">
                     0 символов
@@ -740,11 +757,15 @@
                     <label class="attach-btn">
                         <i class="fas fa-paperclip"></i>
                         Файлы
-                        <input type="file" multiple hidden onchange="app.handleFiles(this.files)">
+                        <input type="file" multiple hidden>
                     </label>
                     <button class="generate-btn" onclick="app.generate()">
-                        Создать варианты
+                        Обновить
                     </button>
+                </div>
+                
+                <div class="debounce-indicator" id="debounce-indicator">
+                    <i class="fas fa-sync-alt fa-spin"></i> Обновление...
                 </div>
             </div>
 
@@ -753,79 +774,130 @@
                     <i class="fas fa-history"></i>
                     Последние заказы
                 </h4>
+                <div class="templates-list"></div>
             </div>
         </div>
 
         <div class="preview-panel">
             <div class="preview-header">
-                <h2>Варианты этикеток</h2>
+                <h2>Дизайны этикеток</h2>
                 <div class="selected-info">
-                    Выбрано: <strong id="selected-variant">Широкий формат (16×9см)</strong>
+                    Формат: <strong id="selected-format">46×46 мм</strong>
                 </div>
             </div>
 
+            <!-- Выбор формата (чипсы) -->
+            <div class="size-selector">
+                <div class="size-chips" id="size-chips">
+                    <!-- Динамически заполняется JS -->
+                </div>
+            </div>
+
+            <!-- 6 вариантов дизайна с реальными изображениями -->
             <div class="label-variants" id="label-variants">
             </div>
         </div>
 
-        <div class="details-panel">
-            <div class="details-section">
-                <h3>Размеры упаковки (см)</h3>
-                
-                <div class="dimension-inputs">
-                    <div class="dimension-input">
-                        <label>Ширина</label>
-                        <input type="number" id="width" value="12" min="1" step="0.1" onchange="app.updateOptimization(); app.livePreview()">
+        <div class="editor-panel">
+            <div class="editor-section">
+                <h3><i class="fas fa-paint-brush"></i> Настройки дизайна</h3>
+
+                <div class="editor-tabs">
+                    <button class="editor-tab active" onclick="app.switchEditorTab('main')">Основное</button>
+                    <button class="editor-tab" onclick="app.switchEditorTab('text')">Текст</button>
+                    <button class="editor-tab" onclick="app.switchEditorTab('icons')">Иконки</button>
+                </div>
+
+                <div id="tab-main" class="tab-content active">
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Размер текста</span>
+                            <span class="control-value" id="text-size-value">100%</span>
+                        </div>
+                        <input type="range" id="text-size" min="50" max="150" value="100" oninput="app.updateEditorSetting('textSize', this.value)">
                     </div>
-                    <div class="dimension-input">
-                        <label>Высота</label>
-                        <input type="number" id="height" value="4" min="1" step="0.1" onchange="app.updateOptimization(); app.livePreview()">
+
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Плотность</span>
+                            <span class="control-value" id="density-value">Средняя</span>
+                        </div>
+                        <input type="range" id="text-density" min="0" max="100" value="50" oninput="app.updateEditorSetting('density', this.value)">
                     </div>
                 </div>
 
-                <div class="optimization-progress">
-                    <div class="progress-header">
-                        <span>Оптимальность</span>
-                        <span id="optimization-percent">75%</span>
+                <div id="tab-text" class="tab-content">
+                    <div class="toggle-switch">
+                        <span class="toggle-label">
+                            <i class="fas fa-heading"></i>
+                            Заголовок CAPS
+                        </span>
+                        <input type="checkbox" class="toggle-input" id="title-caps" checked onchange="app.updateEditorSetting('titleCaps', this.checked)">
                     </div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="optimization-bar" style="width: 75%"></div>
+
+                    <div class="toggle-switch">
+                        <span class="toggle-label">
+                            <i class="fas fa-bold"></i>
+                            Жирный шрифт
+                        </span>
+                        <input type="checkbox" class="toggle-input" id="title-bold" checked onchange="app.updateEditorSetting('titleBold', this.checked)">
+                    </div>
+
+                    <div class="control-group" style="margin-top: 16px;">
+                        <div class="control-label">
+                            <span>Детализация</span>
+                            <span class="control-value" id="details-value">Полная</span>
+                        </div>
+                        <input type="range" id="details-level" min="0" max="100" value="100" oninput="app.updateEditorSetting('detailsLevel', this.value)">
                     </div>
                 </div>
-            </div>
 
-            <div class="details-section qr-section">
-                <h3>QR-код Честного знака</h3>
-                
-                <label class="qr-upload">
-                    <i class="fas fa-upload"></i>
-                    <span>Прикрепить QR-код</span>
-                    <span style="font-size: 11px; color: var(--text-light); margin-top: 4px;">PNG, JPG или введите код</span>
-                    <input type="file" accept="image/*,.txt" hidden onchange="app.handleQRUpload(this.files)">
-                </label>
+                <div id="tab-icons" class="tab-content">
+                    <div class="toggle-switch">
+                        <span class="toggle-label">
+                            <i class="fas fa-check-circle" style="color: #f59e0b;"></i>
+                            ГОСТ
+                        </span>
+                        <input type="checkbox" class="toggle-input" id="icon-gost" checked onchange="app.updateEditorSetting('showGost', this.checked)">
+                    </div>
 
-                <input type="text" 
-                       id="qr-code" 
-                       placeholder="Или введите код вручную..." 
-                       style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px;"
-                       oninput="app.updateQR(this.value); app.livePreview()">
-            </div>
+                    <div class="toggle-switch">
+                        <span class="toggle-label">
+                            <i class="fas fa-recycle" style="color: #10b981;"></i>
+                            Переработка
+                        </span>
+                        <input type="checkbox" class="toggle-input" id="icon-recycle" checked onchange="app.updateEditorSetting('showRecycle', this.checked)">
+                    </div>
 
-            <div class="details-section">
-                <h3>Экспорт</h3>
-                
+                    <div class="toggle-switch">
+                        <span class="toggle-label">
+                            <i class="fas fa-qrcode"></i>
+                            QR-код
+                        </span>
+                        <input type="checkbox" class="toggle-input" id="icon-qr" onchange="app.updateEditorSetting('showQR', this.checked)">
+                    </div>
+
+                    <div class="control-group" style="margin-top: 16px;">
+                        <div class="control-label">
+                            <span>Размер иконок</span>
+                            <span class="control-value" id="icon-size-value">100%</span>
+                        </div>
+                        <input type="range" id="icon-size" min="50" max="150" value="100" oninput="app.updateEditorSetting('iconSize', this.value)">
+                    </div>
+                </div>
+
                 <div class="export-buttons">
                     <button class="export-btn" onclick="app.exportFormat('png')">
-                        <i class="fas fa-image"></i>
+                        <i class="fas fa-download"></i>
                         PNG
                     </button>
                     <button class="export-btn" onclick="app.exportFormat('pdf')">
                         <i class="fas fa-file-pdf"></i>
                         PDF
                     </button>
-                    <button class="export-btn primary" onclick="app.printLabel()">
-                        <i class="fas fa-print"></i>
-                        Печать
+                    <button class="export-btn primary" onclick="app.exportCurrent()">
+                        <i class="fas fa-check"></i>
+                        Экспорт
                     </button>
                 </div>
             </div>
@@ -837,21 +909,56 @@
             <div id="product-info">Товар: Ягодный микс</div>
         </div>
         <div style="font-size: 12px; color: var(--text-light);">
-            ⚡ Предпросмотр обновляется автоматически
+            ⚡ 10 форматов × 6 дизайнов · Реальный предпросмотр
         </div>
     </div>
     
     <script>
     class LabelFlowApp {
         constructor() {
-            this.selectedVariant = null;
-            this.apiUrl = 'http://localhost:8000/api';
-            this.currentProduct = 'Ягодный микс';
-            this.generatedVariants = [];
+            this.selectedSize = 0;
+            this.selectedVariant = 0;
             this.orderHistory = [];
-            this.maxHistorySize = 3;
-            this.livePreviewTimeout = null;
-            this.qrCodeData = null;
+            this.currentProduct = 'Ягодный микс';
+            this.previewCache = new Map(); // Кэш для предпросмотров
+            this.updateTimeout = null;
+            this.isUpdating = false;
+            
+            // Доступные размеры (в мм)
+            this.availableSizes = [
+                { id: 0, width: 46, height: 46, label: '46×46' },
+                { id: 1, width: 48, height: 30, label: '48×30' },
+                { id: 2, width: 40, height: 20, label: '40×20' },
+                { id: 3, width: 30, height: 15, label: '30×15' },
+                { id: 4, width: 43, height: 63, label: '43×63' },
+                { id: 5, width: 99.5, height: 99.5, label: '99.5×99.5' },
+                { id: 6, width: 58, height: 60, label: '58×60' },
+                { id: 7, width: 40, height: 15, label: '40×15' },
+                { id: 8, width: 55, height: 60, label: '55×60' },
+                { id: 9, width: 50, height: 70, label: '50×70' }
+            ];
+            
+            // 6 дизайнов для каждого размера
+            this.designs = [
+                { id: 0, name: 'Классический', desc: 'Строгий стиль' },
+                { id: 1, name: 'Минимализм', desc: 'Только текст' },
+                { id: 2, name: 'Акцентный', desc: 'Цветной акцент' },
+                { id: 3, name: 'Плашечный', desc: 'С фоном' },
+                { id: 4, name: 'Рамка', desc: 'Двойная рамка' },
+                { id: 5, name: 'Современный', desc: 'С иконками' }
+            ];
+            
+            this.editorSettings = {
+                textSize: 100,
+                density: 50,
+                titleCaps: true,
+                titleBold: true,
+                detailsLevel: 100,
+                showGost: true,
+                showRecycle: true,
+                showQR: false,
+                iconSize: 100
+            };
             
             this.init();
         }
@@ -860,562 +967,377 @@
             this.loadOrderHistory();
             this.renderOrderHistory();
             this.updateProductInfo();
-            
-            setTimeout(() => {
-                this.livePreview();
-            }, 100);
+            this.renderSizeChips();
             
             const input = document.getElementById('ai-input');
             if (input) {
+                // Используем debounce для предотвращения лишних запросов
                 input.addEventListener('input', () => {
                     this.updateCharCounter();
-                    this.livePreview();
+                    this.debouncedUpdatePreview();
                 });
             }
             
             this.updateCharCounter();
+            
+            // Первоначальная загрузка предпросмотра
+            setTimeout(() => this.updateAllPreviews(), 500);
+        }
+        
+        debouncedUpdatePreview() {
+            clearTimeout(this.updateTimeout);
+            
+            const indicator = document.getElementById('debounce-indicator');
+            if (indicator) indicator.style.display = 'block';
+            
+            this.updateTimeout = setTimeout(() => {
+                this.updateAllPreviews();
+            }, 800); // Ждем 800мс после последнего ввода
+        }
+        
+        renderSizeChips() {
+            const container = document.getElementById('size-chips');
+            if (!container) return;
+            
+            container.innerHTML = this.availableSizes.map((size, index) => `
+                <div class="size-chip ${index === this.selectedSize ? 'selected' : ''}" 
+                     onclick="app.selectSize(${index})">
+                    ${size.label} мм
+                </div>
+            `).join('');
+        }
+        
+        selectSize(index) {
+            this.selectedSize = index;
+            
+            document.querySelectorAll('.size-chip').forEach((chip, i) => {
+                if (i === index) chip.classList.add('selected');
+                else chip.classList.remove('selected');
+            });
+            
+            document.getElementById('selected-format').innerHTML = 
+                `<strong>${this.availableSizes[index].label} мм</strong>`;
+            
+            this.updateAllPreviews();
+        }
+        
+        async updateAllPreviews() {
+            if (this.isUpdating) return;
+            
+            this.isUpdating = true;
+            
+            const text = document.getElementById('ai-input')?.value.trim() || '';
+            const parsedData = this.parseTextForPreview(text);
+            this.currentProduct = parsedData.product_name;
+            this.updateProductInfo();
+            
+            const currentSize = this.availableSizes[this.selectedSize];
+            
+            // Показываем индикатор загрузки
+            this.showLoadingIndicators();
+            
+            // Загружаем все 6 предпросмотров
+            const previewPromises = [];
+            for (let designId = 0; designId < 6; designId++) {
+                previewPromises.push(this.loadPreviewImage(designId, currentSize, parsedData, text));
+            }
+            
+            try {
+                const previews = await Promise.all(previewPromises);
+                this.displayVariantsWithPreviews(currentSize, parsedData, previews);
+            } catch (error) {
+                console.error('Ошибка загрузки предпросмотров:', error);
+                this.showMessage('Ошибка загрузки предпросмотров', 'error');
+            } finally {
+                this.isUpdating = false;
+                
+                const indicator = document.getElementById('debounce-indicator');
+                if (indicator) indicator.style.display = 'none';
+            }
+        }
+        
+        async loadPreviewImage(designId, size, parsedData, fullText) {
+    const cacheKey = `${designId}-${size.width}x${size.height}-${fullText.length}-${Date.now()}`;
+    
+    // Проверяем кэш
+    if (this.previewCache.has(cacheKey)) {
+        return this.previewCache.get(cacheKey);
+    }
+    
+    // ВАЖНО: Передаем ВСЕ данные, включая полный текст
+    const params = new URLSearchParams({
+        product_name: parsedData.product_name || 'Товар',
+        product_full_name: parsedData.product_full_name || parsedData.product_name || '',
+        ingredients: parsedData.ingredients || '',
+        country: parsedData.country_of_origin || '',
+        net_weight: parsedData.net_weight || '',
+        manufacturer: parsedData.manufacturer || '',
+        importer: parsedData.importer || '',
+        barcode: parsedData.barcode || '',
+        requires_qr: (parsedData.requires_qr || this.editorSettings.showQR) ? 'true' : 'false',
+        requires_gost: (parsedData.has_gost || this.editorSettings.showGost) ? 'true' : 'false',
+        is_recyclable: (parsedData.has_recycle || this.editorSettings.showRecycle) ? 'true' : 'false',
+        width: size.width,
+        height: size.height,
+        design: designId,
+        preview: 'true',
+        t: Date.now(),
+        full_text: fullText // Передаем полный текст для парсинга на сервере
+    });
+    
+    const url = `http://localhost:8000/api/export/custom?${params.toString()}`;
+    
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        const blob = await response.blob();
+        const imageUrl = URL.createObjectURL(blob);
+        
+        this.previewCache.set(cacheKey, imageUrl);
+        
+        setTimeout(() => {
+            URL.revokeObjectURL(imageUrl);
+        }, 30000);
+        
+        return imageUrl;
+    } catch (error) {
+        console.error(`Ошибка загрузки предпросмотра ${designId}:`, error);
+        return null;
+    }
+}
+        
+        showLoadingIndicators() {
+            const container = document.getElementById('label-variants');
+            if (!container) return;
+            
+            // Показываем заглушки загрузки
+            container.innerHTML = Array(6).fill(0).map((_, i) => `
+                <div class="label-variant" style="opacity: 0.7;">
+                    <div class="variant-header">
+                        <div class="variant-info">
+                            <h3>${this.designs[i].name}</h3>
+                        </div>
+                    </div>
+                    <div class="preview-container">
+                        <div class="preview-loading">
+                            <i class="fas fa-spinner fa-spin"></i> Загрузка...
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        displayVariantsWithPreviews(size, parsedData, previewUrls) {
+            const container = document.getElementById('label-variants');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            for (let i = 0; i < 6; i++) {
+                const variant = this.designs[i];
+                const previewUrl = previewUrls[i];
+                const isSelected = i === this.selectedVariant ? 'selected' : '';
+                
+                // Определяем особенности
+                const features = [];
+                if (parsedData.requires_qr || this.editorSettings.showQR) features.push('QR');
+                if (parsedData.has_recycle || this.editorSettings.showRecycle) features.push('♻');
+                if (parsedData.has_gost || this.editorSettings.showGost) features.push('ГОСТ');
+                if (i === 0) features.unshift('Рамка');
+                else if (i === 1) features.unshift('Минимум');
+                else if (i === 2) features.unshift('Акцент');
+                else if (i === 3) features.unshift('Плашка');
+                else if (i === 4) features.unshift('2х рамка');
+                else if (i === 5) features.unshift('Модный');
+                
+                const featuresHtml = features.slice(0, 3).map(f => 
+                    `<span class="feature-tag">${f}</span>`
+                ).join('');
+                
+                container.innerHTML += `
+                    <div class="label-variant ${isSelected}" onclick="app.selectVariant(${i})" data-index="${i}">
+                        <div class="variant-header">
+                            <div class="variant-info">
+                                <h3>${variant.name}</h3>
+                                <div class="variant-size">${size.label} мм</div>
+                            </div>
+                            <div class="variant-features">
+                                ${featuresHtml}
+                            </div>
+                        </div>
+                        
+                        <div class="preview-container">
+                            ${previewUrl ? 
+                                `<img src="${previewUrl}" class="preview-image" alt="${variant.name}" 
+                                      onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22100%22%20height%3D%22100%22%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20fill%3D%22%23f0f0f0%22%2F%3E%3Ctext%20x%3D%2210%22%20y%3D%2250%22%20font-family%3D%22Arial%22%20font-size%3D%2214%22%20fill%3D%22%23999%22%3EОшибка%3C%2Ftext%3E%3C%2Fsvg%3E';">` 
+                                : `<div class="preview-loading"><i class="fas fa-exclamation-triangle"></i> Ошибка</div>`
+                            }
+                        </div>
+                        
+                        <div class="variant-stats">
+                            <div class="stat-item">
+                                <i class="fas fa-ruler"></i>
+                                <span>${size.width}×${size.height} мм</span>
+                            </div>
+                        </div>
+                        
+                        <button class="select-btn" onclick="app.exportVariant(${i}); event.stopPropagation();">
+                            <i class="fas fa-download"></i>
+                            Экспорт
+                        </button>
+                    </div>
+                `;
+            }
         }
         
         parseTextForPreview(text) {
             const result = {
                 product_name: 'Новая этикетка',
                 product_full_name: '',
-                ingredients: '',
-                nutrition: '',
-                nutrition_facts: {},
-                energy_value: '',
-                energy_value_kj: '',
-                net_weight: '',
-                volume: '',
-                expiry_date: '',
-                manufacture_date: '',
-                shelf_life: '',
-                after_opening: '',
-                storage_conditions: '',
-                manufacturer: '',
-                manufacturer_address: '',
-                manufacturer_full: '',
-                importer: '',
-                importer_address: '',
-                importer_full: '',
                 country_of_origin: '',
-                customs_union: false,
-                eaeu: false,
-                certification: [],
-                technical_regulations: [],
-                tr_codes: [],
+                net_weight: '',
+                manufacturer: '',
+                importer: '',
                 barcode: '',
-                ean13: '',
                 requires_qr: false,
-                qr_data: '',
                 has_recycle: false,
-                recycle_code: '',
                 has_gost: false,
-                gost_numbers: [],
-                usage_instructions: '',
-                dilution: '',
-                warnings: [],
-                allergens: [],
-                batch_number: ''
+                ingredients: ''
             };
             
             if (!text) return result;
             
             const lines = text.split('\n');
-            const fullText = text;
             
             for (const line of lines) {
-                if (line.includes('Наименование продукта:')) {
-                    result.product_full_name = line.split(':')[1].trim();
-                    result.product_name = result.product_full_name;
-                    break;
-                }
+                if (line.includes('Товар:')) result.product_name = line.split(':')[1].trim();
+                if (line.includes('Страна:')) result.country_of_origin = line.split(':')[1].trim();
+                if (line.includes('Масса нетто:')) result.net_weight = line.split(':')[1].trim();
+                if (line.includes('Изготовитель:')) result.manufacturer = line.split(':')[1].trim();
+                if (line.includes('Импортер:')) result.importer = line.split(':')[1].trim();
+                if (line.includes('Штрихкод:')) result.barcode = line.split(':')[1].trim();
+                if (line.includes('Состав:')) result.ingredients = line.split(':')[1].trim();
+                if (line.includes('QR-код')) result.requires_qr = true;
+                if (line.includes('знак переработки')) result.has_recycle = true;
+                if (line.includes('ГОСТ')) result.has_gost = true;
             }
-            if (!result.product_full_name) {
-                const firstLine = lines[0];
-                if (firstLine.includes(':')) {
-                    const parts = firstLine.split(':');
-                    result.product_name = parts[1]?.trim() || parts[0].trim();
-                    result.product_full_name = result.product_name;
-                } else {
-                    result.product_name = firstLine.trim();
-                    result.product_full_name = result.product_name;
-                }
-            }
-            
-            const compositionMatch = fullText.match(/Состав продукта:(.+?)(?:\.\s+Пищевая|\.\s+Способ|\.\s+Масса|\.\s+Срок|\.\s+Дата|$)/is);
-            if (compositionMatch) {
-                result.ingredients = compositionMatch[1].trim();
-            } else {
-                for (const line of lines) {
-                    if (line.toLowerCase().includes('состав продукта:') || line.toLowerCase().includes('состав:')) {
-                        result.ingredients = line.split(':')[1].trim();
-                        break;
-                    }
-                }
-            }
-            
-            const nutritionMatch = fullText.match(/Пищевая ценность на 100 г продукта:(.+?)(?:\.\s+Энергетическая|\.\s+Способ|\.\s+Масса|$)/is);
-            if (nutritionMatch) {
-                result.nutrition = nutritionMatch[1].trim();
-            }
-            
-            const energyMatch = fullText.match(/Энергетическая ценность:\s*(\d+)\s*кДж\s*\/\s*(\d+)\s*ккал/i);
-            if (energyMatch) {
-                result.energy_value_kj = energyMatch[1] + ' кДж';
-                result.energy_value = energyMatch[2] + ' ккал';
-            }
-            
-            const weightMatch = fullText.match(/Масса нетто:\s*(\d+\s*г)/i);
-            if (weightMatch) {
-                result.net_weight = weightMatch[1];
-            }
-            
-            const shelfLifeMatch = fullText.match(/Срок годности:\s*(\d+\s*месяца?)/i);
-            if (shelfLifeMatch) {
-                result.shelf_life = shelfLifeMatch[1];
-            }
-            
-            const manufactureMatch = fullText.match(/Дата изготовления:\s*([\d\.]+)/i);
-            if (manufactureMatch) {
-                result.manufacture_date = manufactureMatch[1];
-            }
-            
-            const expiryMatch = fullText.match(/Дата окончания срока годности:\s*([\d\.]+)/i);
-            if (expiryMatch) {
-                result.expiry_date = expiryMatch[1];
-            }
-            
-            const afterMatch = fullText.match(/После вскрытия упаковки\s*([^.]+)/i);
-            if (afterMatch) {
-                result.after_opening = 'После вскрытия: ' + afterMatch[1].trim();
-            }
-            
-            const storageMatch = fullText.match(/Условия хранения:\s*([^.]+)/i);
-            if (storageMatch) {
-                result.storage_conditions = storageMatch[1].trim();
-            }
-            
-            const manufacturerMatch = fullText.match(/Изготовитель:\s*([^.]+)/i);
-            if (manufacturerMatch) {
-                result.manufacturer = manufacturerMatch[1].trim();
-            }
-            
-            const manufacturerAddressMatch = fullText.match(/Адрес изготовителя:\s*([^.]+)/i);
-            if (manufacturerAddressMatch) {
-                result.manufacturer_address = manufacturerAddressMatch[1].trim();
-                result.manufacturer_full = result.manufacturer + ', ' + result.manufacturer_address;
-            } else {
-                result.manufacturer_full = result.manufacturer;
-            }
-            
-            const importerMatch = fullText.match(/Импортер в РФ\/ЕАЭС:\s*([^.]+)/i);
-            if (importerMatch) {
-                result.importer = importerMatch[1].trim();
-                result.importer_full = result.importer;
-            }
-            
-            const importerAddressMatch = fullText.match(/ООО.*?,\s*\d+,\s*Россия,[^.]+/i);
-            if (importerAddressMatch) {
-                result.importer_address = importerAddressMatch[0];
-                result.importer_full = result.importer + ', ' + result.importer_address;
-            }
-            
-            const countryMatch = fullText.match(/Страна происхождения:\s*([^.]+)/i);
-            if (countryMatch) {
-                result.country_of_origin = countryMatch[1].trim();
-            }
-            
-            if (fullText.includes('Таможенный союз')) {
-                result.customs_union = true;
-            }
-            
-            const trMatches = fullText.matchAll(/(ТР ТС\s*\d{3,4}\/\d{4})/gi);
-            for (const match of trMatches) {
-                if (!result.technical_regulations.includes(match[1])) {
-                    result.technical_regulations.push(match[1]);
-                }
-            }
-            
-            const barcodeMatch = fullText.match(/Штрихкод продукта:\s*([\d\s]+)/i);
-            if (barcodeMatch) {
-                result.barcode = barcodeMatch[1].trim();
-                result.ean13 = result.barcode;
-            }
-            
-            if (fullText.includes('Не является лекарственным средством')) {
-                result.warnings.push('Не является лекарственным средством');
-            }
-            
-            if (fullText.includes('Требуется QR-код') || fullText.includes('Честного знака')) {
-                result.requires_qr = true;
-            }
-            
-            if (fullText.includes('знак переработки')) {
-                result.has_recycle = true;
-            }
-            
-            if (fullText.includes('значки ГОСТ') || fullText.includes('Требуется: все значки ГОСТ')) {
-                result.has_gost = true;
-            }
-            
-            const usageMatch = fullText.match(/Способ применения:\s*([^.]+)/i);
-            if (usageMatch) {
-                result.usage_instructions = usageMatch[1].trim();
-                
-                const dilutionMatch = usageMatch[1].match(/(\d+)\s*г.*?(\d+)\s*мл/i);
-                if (dilutionMatch) {
-                    result.dilution = dilutionMatch[1] + 'г / ' + dilutionMatch[2] + 'мл';
-                }
-            }
-            
-            console.log('✅ Парсинг завершен:', {
-                product: result.product_name,
-                ingredients: result.ingredients?.substring(0, 50) + '...',
-                nutrition: result.nutrition,
-                energy: result.energy_value,
-                manufacturer: result.manufacturer_full,
-                importer: result.importer_full,
-                barcode: result.barcode
-            });
             
             return result;
         }
         
-        livePreview() {
-            const text = document.getElementById('ai-input')?.value.trim() || '';
-            const parsedData = this.parseTextForPreview(text);
-            this.currentProduct = parsedData.product_name;
-            this.updateProductInfo();
-            const previewVariants = this.createPreviewVariants(parsedData);
-            this.displayLivePreviews(previewVariants, parsedData);
-            this.updateOptimization();
-        }
-        
-        createPreviewVariants(data) {
-            const width = parseFloat(document.getElementById('width')?.value) || 12;
-            const height = parseFloat(document.getElementById('height')?.value) || 4;
+        selectVariant(index) {
+            this.selectedVariant = index;
             
-            const qrInput = document.getElementById('qr-code')?.value || '';
-            const hasQR = qrInput.length > 0 || this.qrCodeData;
-            
-            return [
-                {
-                    id: 1,
-                    name: 'Широкий формат',
-                    size: '16 × 9 см',
-                    width: 16,
-                    height: 9,
-                    features: ['Заголовок CAPS', 'Перенос строк', hasQR ? 'QR справа' : 'Без QR', 'Подробная информация'],
-                    previewData: data,
-                    isLive: true,
-                    hasQR: hasQR,
-                    qrData: qrInput || this.qrCodeData || 'QR'
-                },
-                {
-                    id: 2,
-                    name: 'Минимализм',
-                    size: '10 × 7 см',
-                    width: 10,
-                    height: 7,
-                    features: ['Только важное', hasQR ? 'Крупный QR' : 'Без QR', 'Чистый дизайн'],
-                    previewData: data,
-                    isLive: true,
-                    hasQR: hasQR,
-                    qrData: qrInput || this.qrCodeData || 'QR'
-                }
-            ];
-        }
-        
-        displayLivePreviews(variants, parsedData) {
-            const container = document.getElementById('label-variants');
-            if (!container) return;
-            
-            container.innerHTML = '';
-            
-            if (!parsedData || !parsedData.product_name || parsedData.product_name === 'Новая этикетка' && !document.getElementById('ai-input')?.value.trim()) {
-                container.innerHTML = `
-                    <div style="flex: 1; display: flex; align-items: center; justify-content: center;">
-                        <div class="empty-preview">
-                            <i class="fas fa-paint-brush"></i>
-                            <h3>Начните вводить текст</h3>
-                            <p>Предпросмотр этикеток появится сразу<br>как вы начнете печатать</p>
-                        </div>
-                    </div>
-                `;
-                return;
-            }
-            
-            variants.forEach((variant, index) => {
-                const variantHTML = this.createLiveVariantHTML(variant, index, parsedData);
-                container.innerHTML += variantHTML;
+            document.querySelectorAll('.label-variant').forEach(el => {
+                el.classList.remove('selected');
             });
             
-            if (variants[0]) {
-                document.getElementById('selected-variant').innerHTML = 
-                    '<strong>' + variants[0].name + ' (' + variants[0].size + ')</strong>';
-                this.selectedVariant = variants[0];
-            }
-            
-            const firstVariant = container.querySelector('.label-variant');
-            if (firstVariant) {
-                firstVariant.classList.add('selected');
-            }
+            const selected = document.querySelector(`[data-index="${index}"]`);
+            if (selected) selected.classList.add('selected');
         }
         
-        createLiveVariantHTML(variant, index, parsedData) {
-            const previewText = this.createLivePreviewText(parsedData, variant);
-            let previewSizeClass = 'size-large';
-            if (variant.width <= 10) previewSizeClass = 'size-small';
-            const qrStyle = this.getLiveQRStyle(variant);
+        async exportVariant(index) {
+            const text = document.getElementById('ai-input').value;
+            const parsedData = this.parseTextForPreview(text);
+            const size = this.availableSizes[this.selectedSize];
             
-            return `
-                <div class="label-variant ${index === 0 ? 'selected' : ''}" 
-                     onclick="app.selectLiveVariant(${index})" 
-                     data-index="${index}">
-                    <div class="variant-header">
-                        <div class="variant-info">
-                            <h3>${variant.name}</h3>
-                            <div class="variant-size">${variant.size}</div>
-                        </div>
-                        <div class="variant-features">
-                            ${variant.features.filter(f => f).map(f => 
-                                `<span class="feature-tag">${f}</span>`
-                            ).join('')}
-                        </div>
-                    </div>
-                    
-                    <div class="preview-container">
-                        <div class="label-mockup ${previewSizeClass}" style="position: relative;">
-                            <div class="mockup-title" style="font-size: ${variant.width >= 16 ? '14px' : '12px'};">${previewText.title}</div>
-                            <div class="mockup-details">${previewText.details}</div>
-                            
-                            ${variant.hasQR ? 
-                                `<div class="mockup-qr" style="${qrStyle}" title="${variant.qrData || 'QR-код'}"></div>` : 
-                                ''}
-                            
-                            ${parsedData.has_recycle ? 
-                                `<div class="mockup-icon" style="bottom: 15px; left: 15px; background: #10b981;">♻</div>` : 
-                                ''}
-                            
-                            ${parsedData.has_gost ? 
-                                `<div class="mockup-icon" style="top: 15px; right: 15px; background: #f59e0b;">ГОСТ</div>` : 
-                                ''}
-                        </div>
-                    </div>
-                    
-                    <div class="variant-stats">
-                        <div class="stat-item">
-                            <i class="fas fa-text-height"></i>
-                            <span>Шрифт: ${this.calculateLiveFontSize(variant.width)}pt</span>
-                        </div>
-                        <div class="stat-item">
-                            <i class="fas fa-eye"></i>
-                            <span>Читаемость: ${this.calculateLiveReadability(variant.width)}%</span>
-                        </div>
-                        <div class="stat-item">
-                            <i class="fas fa-qrcode"></i>
-                            <span>QR: ${variant.hasQR ? 'Да' : 'Нет'}</span>
-                        </div>
-                    </div>
-                    
-                    <button class="select-btn" onclick="app.exportLiveVariant(${index})">
-                        <i class="fas fa-download"></i>
-                        Экспорт
-                    </button>
-                </div>
-            `;
+            const params = new URLSearchParams({
+                product_name: parsedData.product_name,
+                product_full_name: parsedData.product_full_name || parsedData.product_name,
+                ingredients: parsedData.ingredients || '',
+                country: parsedData.country_of_origin || '',
+                net_weight: parsedData.net_weight || '',
+                manufacturer: parsedData.manufacturer || '',
+                importer: parsedData.importer || '',
+                barcode: parsedData.barcode || '',
+                requires_qr: (parsedData.requires_qr || this.editorSettings.showQR) ? 'true' : 'false',
+                requires_gost: (parsedData.has_gost || this.editorSettings.showGost) ? 'true' : 'false',
+                is_recyclable: (parsedData.has_recycle || this.editorSettings.showRecycle) ? 'true' : 'false',
+                width: size.width,
+                height: size.height,
+                design: index,
+                t: Date.now()
+            });
+            
+            window.location.href = `http://localhost:8000/api/export/custom?${params.toString()}`;
+            this.showMessage(`Скачивание: ${parsedData.product_name} (${size.label} мм)`, 'success');
         }
         
-        createLivePreviewText(data, variant) {
-            let title = data.product_name.toUpperCase();
-            if (title.length > 40) {
-                title = title.substring(0, 37) + '...';
-            }
-            
-            const detailsParts = [];
-            if (data.country_of_origin && data.country_of_origin !== 'Страна') {
-                detailsParts.push(data.country_of_origin);
-            }
-            if (data.net_weight) {
-                detailsParts.push(data.net_weight);
-            }
-            if (data.importer && data.importer !== 'Импортёр') {
-                let importerShort = data.importer;
-                if (importerShort.length > 25) {
-                    importerShort = importerShort.substring(0, 22) + '...';
-                }
-                detailsParts.push(importerShort);
-            }
-            if (data.has_recycle) {
-                detailsParts.push('♻');
-            }
-            
-            let details = detailsParts.join(' • ');
-            if (!details) {
-                details = 'Этикетка • Предпросмотр';
-            }
-            
-            return {
-                title: title,
-                details: details
-            };
+        exportCurrent() {
+            this.exportVariant(this.selectedVariant);
         }
         
-        getLiveQRStyle(variant) {
-            if (variant.name.includes('Широкий')) {
-                return 'bottom: 15px; right: 15px;';
+        exportFormat(format) {
+            if (format === 'png') {
+                this.exportCurrent();
             } else {
-                return 'bottom: 20px; left: 50%; transform: translateX(-50%); width: 30px; height: 30px;';
+                this.showMessage('PDF экспорт будет доступен позже', 'warning');
             }
         }
         
-        selectLiveVariant(index) {
-            const allVariants = document.querySelectorAll('.label-variant');
-            allVariants.forEach(v => v.classList.remove('selected'));
-            const selectedElement = document.querySelector(`[data-index="${index}"]`);
-            if (selectedElement) {
-                selectedElement.classList.add('selected');
-                const title = selectedElement.querySelector('h3').textContent;
-                const size = selectedElement.querySelector('.variant-size').textContent;
-                document.getElementById('selected-variant').innerHTML = 
-                    `<strong>${title} (${size})</strong>`;
-                this.selectedVariant = this.generatedVariants[index] || { id: index + 1, name: title };
-            }
-        }
-        
-        async generate() {
+        generate() {
             const text = document.getElementById('ai-input').value.trim();
             if (!text) {
                 this.showMessage('Введите описание этикетки', 'warning');
                 return;
             }
             
-            this.showMessage('Генерация этикеток...', 'info');
+            this.showMessage('Обновление...', 'info');
+            this.updateAllPreviews();
             
-            try {
-                const response = await fetch(`${this.apiUrl}/generate`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ text: text })
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    this.generatedVariants = data.variants;
-                    this.showMessage('Этикетки созданы!', 'success');
-                    this.saveToHistory(text, data.product_name);
-                } else {
-                    throw new Error(data.error || 'Ошибка сервера');
-                }
-            } catch (error) {
-                console.error('Ошибка:', error);
-                this.showMessage('Ошибка подключения к серверу', 'warning');
-                const parsedData = this.parseTextForPreview(text);
-                this.saveToHistory(text, parsedData.product_name);
-            }
-        }
-        
-        exportLiveVariant(index) {
-            const text = document.getElementById('ai-input').value;
             const parsedData = this.parseTextForPreview(text);
-            const qrCode = document.getElementById('qr-code').value || this.qrCodeData || '';
-            
-            const params = new URLSearchParams();
-            
-            params.append('product_name', parsedData.product_name || 'Товар');
-            params.append('product_full_name', parsedData.product_full_name || parsedData.product_name || '');
-            params.append('ingredients', parsedData.ingredients || '');
-            params.append('nutrition', parsedData.nutrition || '');
-            params.append('energy_value', parsedData.energy_value || '');
-            params.append('energy_value_kj', parsedData.energy_value_kj || '');
-            params.append('net_weight', parsedData.net_weight || '');
-            params.append('expiry_date', parsedData.expiry_date || '');
-            params.append('manufacture_date', parsedData.manufacture_date || '');
-            params.append('shelf_life', parsedData.shelf_life || '');
-            params.append('after_opening', parsedData.after_opening || '');
-            params.append('storage_conditions', parsedData.storage_conditions || '');
-            params.append('manufacturer', parsedData.manufacturer || '');
-            params.append('manufacturer_address', parsedData.manufacturer_address || '');
-            params.append('manufacturer_full', parsedData.manufacturer_full || '');
-            params.append('importer', parsedData.importer || '');
-            params.append('importer_address', parsedData.importer_address || '');
-            params.append('importer_full', parsedData.importer_full || '');
-            params.append('country', parsedData.country_of_origin || '');
-            params.append('country_of_origin', parsedData.country_of_origin || '');
-            params.append('customs_union', parsedData.customs_union ? 'true' : 'false');
-            
-            if (parsedData.technical_regulations && parsedData.technical_regulations.length) {
-                params.append('technical_regulations', parsedData.technical_regulations.join('|'));
-            }
-            
-            params.append('barcode', parsedData.barcode || parsedData.ean13 || '');
-            params.append('ean13', parsedData.ean13 || parsedData.barcode || '');
-            params.append('qr_required', parsedData.requires_qr ? 'true' : 'false');
-            params.append('qr', qrCode || parsedData.qr_data || '');
-            params.append('recycle', parsedData.has_recycle ? 'true' : 'false');
-            params.append('gost', parsedData.has_gost ? 'true' : 'false');
-            params.append('usage_instructions', parsedData.usage_instructions || '');
-            
-            if (parsedData.warnings && parsedData.warnings.length) {
-                params.append('warnings', parsedData.warnings.join('|'));
-            }
-            
-            const variant = this.generatedVariants[index] || { id: index + 1 };
-            const exportUrl = `${this.apiUrl}/export/${variant.id}?${params.toString()}`;
-            
-            window.location.href = exportUrl;
-            this.showMessage(`Скачивание этикетки для "${parsedData.product_name}"`, 'success');
+            this.saveToHistory(text, parsedData.product_name);
         }
         
-        exportFormat(format) {
-            if (format === 'png' && this.selectedVariant) {
-                const text = document.getElementById('ai-input').value;
-                const parsedData = this.parseTextForPreview(text);
-                const qrCode = document.getElementById('qr-code').value || this.qrCodeData || '';
-                
-                const params = new URLSearchParams({
-                    product_name: parsedData.product_name || 'Товар',
-                    country: parsedData.country_of_origin || '',
-                    importer: parsedData.importer || '',
-                    manufacturer: parsedData.manufacturer || '',
-                    recycle: parsedData.has_recycle ? 'true' : 'false',
-                    gost: parsedData.has_gost ? 'true' : 'false',
-                    qr: qrCode || 'QR'
-                });
-                
-                const variantId = this.selectedVariant.id || 1;
-                window.location.href = `${this.apiUrl}/export/${variantId}?${params.toString()}`;
-                this.showMessage(`Скачивание этикетки для "${parsedData.product_name}"`, 'success');
-            } else if (format === 'pdf') {
-                this.showMessage('PDF экспорт будет доступен позже', 'warning');
-            } else {
-                this.showMessage('Выберите вариант этикетки', 'warning');
+        switchEditorTab(tabName) {
+            document.querySelectorAll('.editor-tab').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            event.target.classList.add('active');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+        }
+        
+        updateEditorSetting(key, value) {
+            this.editorSettings[key] = value;
+            
+            const valueMap = {
+                textSize: 'text-size-value',
+                density: 'density-value',
+                detailsLevel: 'details-value',
+                iconSize: 'icon-size-value'
+            };
+            
+            if (valueMap[key]) {
+                const displayEl = document.getElementById(valueMap[key]);
+                if (displayEl) {
+                    if (key === 'density') {
+                        const levels = ['Низкая', 'Средняя', 'Высокая'];
+                        displayEl.textContent = levels[Math.floor(value / 34)] || 'Средняя';
+                    } else if (key === 'detailsLevel') {
+                        const levels = ['Кратко', 'Средне', 'Полно'];
+                        displayEl.textContent = levels[Math.floor(value / 34)] || 'Полно';
+                    } else {
+                        displayEl.textContent = value + '%';
+                    }
+                }
             }
+            
+            // Обновляем предпросмотр при изменении настроек
+            this.debouncedUpdatePreview();
         }
         
         updateCharCounter() {
             const input = document.getElementById('ai-input');
             const counter = document.getElementById('char-counter');
             if (input && counter) {
-                const count = input.value.length;
-                counter.textContent = `${count} символов`;
+                counter.textContent = `${input.value.length} символов`;
             }
-        }
-        
-        calculateLiveFontSize(width) {
-            if (width >= 16) return 16;
-            return 12;
-        }
-        
-        calculateLiveReadability(width) {
-            if (width >= 16) return 95;
-            return 82;
         }
         
         saveToHistory(text, productName) {
@@ -1428,8 +1350,8 @@
             };
             
             this.orderHistory.unshift(order);
-            if (this.orderHistory.length > this.maxHistorySize) {
-                this.orderHistory = this.orderHistory.slice(0, this.maxHistorySize);
+            if (this.orderHistory.length > 5) {
+                this.orderHistory = this.orderHistory.slice(0, 5);
             }
             this.saveOrderHistory();
             this.renderOrderHistory();
@@ -1437,255 +1359,81 @@
         
         loadOrderHistory() {
             try {
-                const saved = localStorage.getItem('labelflow_order_history');
+                const saved = localStorage.getItem('labelflow_order_history_v3');
                 if (saved) {
                     this.orderHistory = JSON.parse(saved);
-                    this.orderHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
-                    if (this.orderHistory.length > this.maxHistorySize) {
-                        this.orderHistory = this.orderHistory.slice(0, this.maxHistorySize);
-                    }
                 }
             } catch (error) {
-                console.error('Ошибка загрузки истории:', error);
                 this.orderHistory = [];
             }
         }
         
         saveOrderHistory() {
             try {
-                localStorage.setItem('labelflow_order_history', JSON.stringify(this.orderHistory));
-            } catch (error) {
-                console.error('Ошибка сохранения истории:', error);
-            }
+                localStorage.setItem('labelflow_order_history_v3', JSON.stringify(this.orderHistory));
+            } catch (error) {}
         }
         
         renderOrderHistory() {
-            const container = document.querySelector('.history-templates');
+            const container = document.querySelector('.history-templates .templates-list');
             if (!container) return;
             
-            const header = container.querySelector('h4');
-            if (!header) return;
+            container.innerHTML = '';
             
-            let nextElement = header.nextElementSibling;
-            while (nextElement) {
-                const toRemove = nextElement;
-                nextElement = nextElement.nextElementSibling;
-                toRemove.remove();
-            }
+            const itemsToShow = this.orderHistory.length > 0 ? this.orderHistory : [
+                { id: 1, productName: 'Ягодный микс', timestamp: 'Пример', text: document.getElementById('ai-input').value }
+            ];
             
-            const templatesContainer = document.createElement('div');
-            templatesContainer.className = 'templates-list';
-            container.appendChild(templatesContainer);
-            
-            const itemsToShow = this.orderHistory.length > 0 ? 
-                this.orderHistory : [
-                    {
-                        id: 1,
-                        productName: 'Ягодный микс',
-                        text: document.getElementById('ai-input').value,
-                        timestamp: 'Пример'
-                    }
-                ];
-            
-            itemsToShow.forEach((order) => {
-                const orderElement = document.createElement('div');
-                orderElement.className = 'template-item';
-                orderElement.innerHTML = `
+            itemsToShow.forEach(order => {
+                const el = document.createElement('div');
+                el.className = 'template-item';
+                el.innerHTML = `
                     <div class="template-product">${order.productName}</div>
-                    <div style="font-size: 12px; color: var(--text-light); margin-bottom: 6px;">
-                        ${this.getPreviewText(order.text)}
-                    </div>
+                    <div style="font-size: 12px; color: var(--text-light); margin-bottom: 6px;">${order.text?.substring(0, 40)}...</div>
                     <div class="template-size">${order.timestamp}</div>
                 `;
-                
-                orderElement.addEventListener('click', () => {
-                    this.loadFromHistory(order);
-                });
-                
-                templatesContainer.appendChild(orderElement);
+                el.onclick = () => {
+                    document.getElementById('ai-input').value = order.text;
+                    this.currentProduct = order.productName;
+                    this.updateProductInfo();
+                    this.updateAllPreviews();
+                };
+                container.appendChild(el);
             });
-        }
-        
-        getPreviewText(text) {
-            const lines = text.split('\n').filter(line => line.trim());
-            if (lines.length < 2) return text.substring(0, 60) + '...';
-            const previewLines = lines.slice(1, 3).map(line => {
-                const cleanLine = line.split(':').slice(1).join(':').trim() || line.trim();
-                return cleanLine.substring(0, 30);
-            });
-            return previewLines.join(' • ') + (lines.length > 3 ? '...' : '');
-        }
-        
-        loadFromHistory(order) {
-            document.getElementById('ai-input').value = order.text;
-            this.currentProduct = order.productName;
-            this.updateProductInfo();
-            this.showMessage(`Загружен заказ: ${order.productName}`, 'success');
-            this.livePreview();
-            setTimeout(() => {
-                this.generate();
-            }, 500);
         }
         
         updateProductInfo() {
-            const productEl = document.getElementById('product-info');
-            if (productEl) productEl.textContent = 'Товар: ' + (this.currentProduct || 'Новая этикетка');
-        }
-        
-        updateOptimization() {
-            const width = parseFloat(document.getElementById('width').value) || 12;
-            const height = parseFloat(document.getElementById('height').value) || 4;
-            const packageArea = width * height;
-            const labelArea = 16 * 9;
-            const coverage = Math.min(100, Math.round((labelArea / packageArea) * 100 * 0.8));
-            
-            const percentEl = document.getElementById('optimization-percent');
-            const barEl = document.getElementById('optimization-bar');
-            
-            if (percentEl) percentEl.textContent = coverage + '%';
-            if (barEl) barEl.style.width = coverage + '%';
+            const el = document.getElementById('product-info');
+            if (el) el.textContent = 'Товар: ' + (this.currentProduct || 'Новая этикетка');
         }
         
         showMessage(text, type = 'info') {
-            console.log(`${type}: ${text}`);
-            
-            const existingNotifications = document.querySelectorAll('.notification');
-            existingNotifications.forEach(n => n.remove());
-            
-            const colors = {
-                info: '#3b82f6',
-                success: '#10b981',
-                warning: '#f59e0b',
-                error: '#ef4444'
-            };
-            
-            const color = colors[type] || colors.info;
+            const colors = { info: '#3b82f6', success: '#10b981', warning: '#f59e0b', error: '#ef4444' };
             
             const notification = document.createElement('div');
-            notification.className = 'notification';
-            notification.innerHTML = `
-                <div style="position: fixed; top: 20px; right: 20px; background: ${color}; 
-                            color: white; padding: 12px 20px; border-radius: 8px; font-size: 14px; z-index: 1000; 
-                            animation: fadeIn 0.3s; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-                    ${text}
-                </div>
+            notification.style.cssText = `
+                position: fixed; top: 20px; right: 20px; background: ${colors[type]}; 
+                color: white; padding: 12px 20px; border-radius: 8px; font-size: 14px; 
+                z-index: 1000; animation: fadeIn 0.3s; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             `;
-            
+            notification.textContent = text;
             document.body.appendChild(notification);
             
             setTimeout(() => {
                 notification.style.animation = 'fadeOut 0.3s';
-                setTimeout(() => {
-                    if (notification.parentNode) {
-                        notification.parentNode.removeChild(notification);
-                    }
-                }, 300);
+                setTimeout(() => notification.remove(), 300);
             }, 3000);
-        }
-        
-        handleFiles(files) {
-            if (files.length > 0) {
-                this.showMessage('Добавлено ' + files.length + ' файл(ов)', 'info');
-            }
-        }
-        
-        handleQRUpload(files) {
-            if (files.length > 0) {
-                const file = files[0];
-                if (file.type.startsWith('image/')) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        this.qrCodeData = 'QR_загружен';
-                        document.getElementById('qr-code').value = 'QR-код загружен';
-                        this.showMessage('QR-код загружен', 'success');
-                        this.livePreview();
-                    };
-                    reader.readAsDataURL(file);
-                } else {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        this.qrCodeData = e.target.result.substring(0, 30) + '...';
-                        document.getElementById('qr-code').value = 'Код из файла';
-                        this.showMessage('Данные загружены', 'success');
-                        this.livePreview();
-                    };
-                    reader.readAsText(file);
-                }
-            }
-        }
-        
-        updateQR(value) {
-            this.qrCodeData = value || null;
-        }
-        
-        printLabel() {
-            this.showMessage('Подготовка к печати...');
-            setTimeout(() => {
-                window.print();
-            }, 500);
-        }
-        
-        clearHistory() {
-            if (confirm('Очистить историю заказов?')) {
-                this.orderHistory = [];
-                localStorage.removeItem('labelflow_order_history');
-                this.renderOrderHistory();
-                this.showMessage('История очищена', 'info');
-            }
         }
     }
     
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', () => {
         window.app = new LabelFlowApp();
         
         const style = document.createElement('style');
         style.textContent = `
-            @keyframes fadeIn {
-                from { opacity: 0; transform: translateY(-10px); }
-                to { opacity: 1; transform: translateY(0); }
-            }
-            @keyframes fadeOut {
-                from { opacity: 1; transform: translateY(0); }
-                to { opacity: 0; transform: translateY(-10px); }
-            }
-            
-            .selected-template {
-                background: rgba(37, 99, 235, 0.05) !important;
-                border-color: var(--primary) !important;
-            }
-            
-            .history-templates h4 {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-            
-            .clear-history-btn {
-                background: none;
-                border: none;
-                color: var(--text-light);
-                cursor: pointer;
-                font-size: 12px;
-                padding: 2px 6px;
-                border-radius: 4px;
-            }
-            
-            .clear-history-btn:hover {
-                color: var(--primary);
-                background: rgba(37, 99, 235, 0.1);
-            }
+            @keyframes fadeOut { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-10px); } }
         `;
         document.head.appendChild(style);
-        
-        const historyHeader = document.querySelector('.history-templates h4');
-        if (historyHeader) {
-            const clearBtn = document.createElement('button');
-            clearBtn.className = 'clear-history-btn';
-            clearBtn.innerHTML = '<i class="fas fa-trash"></i>';
-            clearBtn.title = 'Очистить историю';
-            clearBtn.onclick = () => app.clearHistory();
-            historyHeader.appendChild(clearBtn);
-        }
     });
     </script>
 </body>
