@@ -320,6 +320,17 @@ def _dead_stock_status(last_out_date: Optional[pd.Timestamp]) -> str:
     return "зеленый"
 
 
+def _dead_stock_sort_rank(last_out_date: Optional[pd.Timestamp]) -> int:
+    if last_out_date is None or pd.isna(last_out_date):
+        return 3
+    days = (datetime.now().date() - last_out_date.date()).days
+    if days >= 90:
+        return 2
+    if days >= 60:
+        return 1
+    return 0
+
+
 @dataclass
 class CombinedReportResult:
     rows: List[Dict]
@@ -376,6 +387,8 @@ def generate_combined_report(
     report = report.merge(lines_pop, on="article", how="left")
 
     report["dead_stock_status"] = report["last_out_date"].apply(_dead_stock_status)
+    report["dead_stock_rank"] = report["last_out_date"].apply(_dead_stock_sort_rank)
+    report = report.sort_values(by=["dead_stock_rank", "article"], ascending=[True, True]).reset_index(drop=True)
 
     # output columns
     output = pd.DataFrame({
@@ -440,8 +453,32 @@ def generate_combined_report(
         worksheet.column_dimensions["V"].width = 16
 
         # Перенос текста и высота строк
-        from openpyxl.styles import Alignment
-        wrap = Alignment(wrap_text=True, vertical="top")
+        from openpyxl.styles import Alignment, Font, PatternFill
+        header_fill = PatternFill(fill_type="solid", start_color="00008B", end_color="00008B")
+        header_font = Font(color="FFFFFF", bold=True)
+        dead_stock_fills = {
+            "РєСЂР°СЃРЅС‹Р№": PatternFill(fill_type="solid", start_color="FF0000", end_color="FF0000"),
+            "Р¶РµР»С‚С‹Р№": PatternFill(fill_type="solid", start_color="FFFF00", end_color="FFFF00"),
+            "Р·РµР»РµРЅС‹Р№": PatternFill(fill_type="solid", start_color="00B050", end_color="00B050"),
+        }
+        for cell in worksheet[1]:
+            cell.fill = header_fill
+            cell.font = header_font
+        dead_stock_fills = {
+            "red": PatternFill(fill_type="solid", start_color="FFFF0000", end_color="FFFF0000"),
+            "yellow": PatternFill(fill_type="solid", start_color="FFFFFF00", end_color="FFFFFF00"),
+            "green": PatternFill(fill_type="solid", start_color="FF00B050", end_color="FF00B050"),
+        }
+
+        # Подсветка артикула (колонка A) по статусу "Мертвый сток" (последняя колонка)
+        for row_idx, last_out_date in enumerate(report.get("last_out_date", pd.Series(dtype="datetime64[ns]")), start=2):
+            if last_out_date is None or pd.isna(last_out_date):
+                continue
+            days = (datetime.now().date() - last_out_date.date()).days
+            color_key = "red" if days >= 90 else ("yellow" if days >= 60 else "green")
+            worksheet.cell(row=row_idx, column=1).fill = dead_stock_fills[color_key]
+
+        wrap = Alignment(wrap_text=True, horizontal="center", vertical="center")
         for row in worksheet.iter_rows():
             worksheet.row_dimensions[row[0].row].height = 30
             for cell in row:

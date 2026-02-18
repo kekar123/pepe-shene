@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -25,7 +25,7 @@
 <!-- Уведомления -->
 <div id="notification" class="notification">
     <span id="notification-text"></span>
-    <button class="close-notification" onclick="hideNotification()" aria-label="Закрыть">×</button>
+    <button class="close-notification" onclick="hideNotification()" aria-label="Закрыть">&times;</button>
     <div class="progress-bar">
         <div class="progress-fill" id="progress-fill"></div>
     </div>
@@ -34,20 +34,57 @@
 <main class="page-container">
     <div class="container">
         <div class="upload-section">
-            <div class="upload-title">Общий отчет (несколько файлов)</div>
-            <div class="upload-area" id="combinedDropArea">
-                <div class="upload-icon">📎</div>
-                <div class="upload-text">Выберите все файлы для общего отчета</div>
-                <input type="file" id="combinedFileInput" class="file-input" accept=".xls,.xlsx" multiple>
-                <button class="upload-button" onclick="document.getElementById('combinedFileInput').click()">
-                    Выбрать файлы
-                </button>
-                <div class="upload-note">
-                    <strong>Нужные файлы:</strong> Движения стока, Линии пикинга, Основные данные (Article Master Data),
-                    ABC анализ, Проверка заказано - собрано, PUD отчет по стоку
+            <div class="upload-title">Общий отчет</div>
+            <div class="upload-area combined-upload-area">
+                <div class="upload-text">Выберите файл для каждого источника, затем нажмите "Сформировать отчет"</div>
+
+                <div class="combined-upload-grid">
+                    <div class="combined-upload-card">
+                        <strong>Основные данные (Article Master Data)</strong>
+                        <input type="file" id="combinedMasterInput" class="file-input" accept=".xls,.xlsx">
+                        <button class="upload-button combined-file-btn" onclick="document.getElementById('combinedMasterInput').click()">Выбрать файл</button>
+                        <span id="combinedMasterName" class="combined-file-status">Файл не выбран</span>
+                    </div>
+
+                    <div class="combined-upload-card">
+                        <strong>Движения стока</strong>
+                        <input type="file" id="combinedMovementsInput" class="file-input" accept=".xls,.xlsx">
+                        <button class="upload-button combined-file-btn" onclick="document.getElementById('combinedMovementsInput').click()">Выбрать файл</button>
+                        <span id="combinedMovementsName" class="combined-file-status">Файл не выбран</span>
+                    </div>
+
+                    <div class="combined-upload-card">
+                        <strong>Линии пикинга</strong>
+                        <input type="file" id="combinedLinesInput" class="file-input" accept=".xls,.xlsx">
+                        <button class="upload-button combined-file-btn" onclick="document.getElementById('combinedLinesInput').click()">Выбрать файл</button>
+                        <span id="combinedLinesName" class="combined-file-status">Файл не выбран</span>
+                    </div>
+
+                    <div class="combined-upload-card">
+                        <strong>ABC анализ</strong>
+                        <input type="file" id="combinedAbcInput" class="file-input" accept=".xls,.xlsx">
+                        <button class="upload-button combined-file-btn" onclick="document.getElementById('combinedAbcInput').click()">Выбрать файл</button>
+                        <span id="combinedAbcName" class="combined-file-status">Файл не выбран</span>
+                    </div>
+
+                    <div class="combined-upload-card">
+                        <strong>Проверка заказано-собрано</strong>
+                        <input type="file" id="combinedOrderPickedInput" class="file-input" accept=".xls,.xlsx">
+                        <button class="upload-button combined-file-btn" onclick="document.getElementById('combinedOrderPickedInput').click()">Выбрать файл</button>
+                        <span id="combinedOrderPickedName" class="combined-file-status">Файл не выбран</span>
+                    </div>
+
+                    <div class="combined-upload-card">
+                        <strong>PUD отчет по стоку</strong>
+                        <input type="file" id="combinedStockInput" class="file-input" accept=".xls,.xlsx">
+                        <button class="upload-button combined-file-btn" onclick="document.getElementById('combinedStockInput').click()">Выбрать файл</button>
+                        <span id="combinedStockName" class="combined-file-status">Файл не выбран</span>
+                    </div>
                 </div>
-                <div class="upload-note">
-                    <a id="combinedReportDownload" class="upload-button" style="display: none;" download>
+
+                <div class="combined-upload-actions">
+                    <button id="combinedGenerateBtn" class="upload-button combined-generate-btn">Сформировать отчет</button>
+                    <a id="combinedReportDownload" class="upload-button combined-download-btn" style="display: none;" download>
                         Скачать общий отчет
                     </a>
                 </div>
@@ -59,6 +96,7 @@
 <section class="results-section">
     <main class="result-container">
         <h2>Общий отчет</h2>
+
         <div class="table-container">
             <div class="table-wrapper">
                 <table id="combinedReportTable">
@@ -95,11 +133,55 @@
     </main>
 </section>
 
+<section class="charts-section combined-charts-section">
+    <main class="result-container">
+        <h2>Визуализация отчета</h2>
+
+        <div id="combinedChartsLoading" style="display: none; text-align: center; padding: 20px;">
+            <h3>Построение графиков...</h3>
+        </div>
+
+        <div id="combinedChartsContainer" style="display: none;">
+            <div class="charts-row">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3>ABC Анализ общего отчета</h3>
+                        <div class="chart-description">
+                            Распределение товаров по ABC категориям в общем отчете.
+                        </div>
+                    </div>
+                    <div class="chart-content">
+                        <img id="combinedAbcChartImage" src="" alt="ABC анализ общего отчета" class="chart-image">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="combinedNoChartsMessage" style="text-align: center; padding: 24px 20px; color: #7f8c8d; background: #f8f9fa; border-radius: 12px; margin: 12px 0;">
+            <h3>Графики не загружены</h3>
+            <p>Сформируйте общий отчет для построения графиков.</p>
+        </div>
+    </main>
+</section>
+
 <footer class="footer">
     <div class="footer-inner">
         ©2025 SKLAD | Проект Ногинского колледжа
     </div>
 </footer>
+
+<div id="chartModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitle">График</h3>
+            <button class="close-modal" onclick="closeModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <img id="modalImage" src="" alt="Полноэкранный график" class="modal-image">
+            <div class="modal-description" id="modalDescription"></div>
+        </div>
+    </div>
+</div>
 
 <script>
     window.DISABLE_CHART_NOTIFICATIONS = true;

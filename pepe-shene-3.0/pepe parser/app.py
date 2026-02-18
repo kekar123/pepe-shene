@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 import sys
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
@@ -39,13 +39,13 @@ except Exception:
     pass
 
 
-# =============== Р вЂќР С›Р СџР С›Р вЂєР СњР вЂўР СњР В�Р Р‡ Р вЂќР вЂєР Р‡ Р вЂ�Р С’Р вЂ”Р В« Р вЂќР С’Р СњР СњР В«Р Тђ ===============
+# =============== Р В РІР‚СњР В РЎвЂєР В РЎСџР В РЎвЂєР В РІР‚С”Р В РЎСљР В РІР‚СћР В РЎСљР В Р’пїЅР В Р вЂЎ Р В РІР‚СњР В РІР‚С”Р В Р вЂЎ Р В РІР‚пїЅР В РЎвЂ™Р В РІР‚вЂќР В Р’В« Р В РІР‚СњР В РЎвЂ™Р В РЎСљР В РЎСљР В Р’В«Р В РўС’ ===============
 
 import sys
 
 
 
-# Р вЂќР С•Р В±Р В°Р Р†Р В»РЎРЏР ВµР С� Р С—РЎС“РЎвЂљРЎРЉ Р С” Р С”Р С•РЎР‚Р Р…РЎР‹ Р С—РЎР‚Р С•Р ВµР С”РЎвЂљР В° Р Т‘Р В»РЎРЏ Р С‘Р С�Р С—Р С•РЎР‚РЎвЂљР В° Р С�Р С•Р Т‘РЎС“Р В»Р ВµР в„–
+# Р В РІР‚СњР В РЎвЂўР В Р’В±Р В Р’В°Р В Р вЂ Р В Р’В»Р РЋР РЏР В Р’ВµР В РЎпїЅ Р В РЎвЂ”Р РЋРЎвЂњР РЋРІР‚С™Р РЋР Р‰ Р В РЎвЂќ Р В РЎвЂќР В РЎвЂўР РЋР вЂљР В Р вЂ¦Р РЋР вЂ№ Р В РЎвЂ”Р РЋР вЂљР В РЎвЂўР В Р’ВµР В РЎвЂќР РЋРІР‚С™Р В Р’В° Р В РўвЂР В Р’В»Р РЋР РЏ Р В РЎвЂР В РЎпїЅР В РЎвЂ”Р В РЎвЂўР РЋР вЂљР РЋРІР‚С™Р В Р’В° Р В РЎпїЅР В РЎвЂўР В РўвЂР РЋРЎвЂњР В Р’В»Р В Р’ВµР В РІвЂћвЂ“
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -78,7 +78,7 @@ except ImportError as e:
 
 
 
-# =============== Р СњР С›Р вЂ™Р В«Р в„ў Р вЂ”Р С’Р вЂњР В Р Р€Р вЂ”Р В§Р В�Р С™ Р вЂќР вЂєР Р‡ Р С’Р СњР С’Р вЂєР В�Р вЂ”Р С’ ===============
+# =============== Р В РЎСљР В РЎвЂєР В РІР‚в„ўР В Р’В«Р В РІвЂћСћ Р В РІР‚вЂќР В РЎвЂ™Р В РІР‚СљР В Р’В Р В Р в‚¬Р В РІР‚вЂќР В Р’В§Р В Р’пїЅР В РЎв„ў Р В РІР‚СњР В РІР‚С”Р В Р вЂЎ Р В РЎвЂ™Р В РЎСљР В РЎвЂ™Р В РІР‚С”Р В Р’пїЅР В РІР‚вЂќР В РЎвЂ™ ===============
 
 try:
 
@@ -98,7 +98,7 @@ analysis_db = None
 
 
 
-# =============== Р вЂќР С›Р СџР С›Р вЂєР СњР вЂўР СњР В�Р Р‡ Р вЂќР вЂєР Р‡ Р вЂњР В Р С’Р В¤Р В�Р С™Р С›Р вЂ™ ===============
+# =============== Р В РІР‚СњР В РЎвЂєР В РЎСџР В РЎвЂєР В РІР‚С”Р В РЎСљР В РІР‚СћР В РЎСљР В Р’пїЅР В Р вЂЎ Р В РІР‚СњР В РІР‚С”Р В Р вЂЎ Р В РІР‚СљР В Р’В Р В РЎвЂ™Р В Р’В¤Р В Р’пїЅР В РЎв„ўР В РЎвЂєР В РІР‚в„ў ===============
 
 try:
 
@@ -193,7 +193,7 @@ def try_load_latest_analysis_into_db():
 
 
 
-# =============== Р В�Р СњР В�Р В¦Р В�Р С’Р вЂєР В�Р вЂ”Р С’Р В¦Р В�Р Р‡ Р вЂ�Р С’Р вЂ” Р вЂќР С’Р СњР СњР В«Р Тђ ===============
+# =============== Р В Р’пїЅР В РЎСљР В Р’пїЅР В Р’В¦Р В Р’пїЅР В РЎвЂ™Р В РІР‚С”Р В Р’пїЅР В РІР‚вЂќР В РЎвЂ™Р В Р’В¦Р В Р’пїЅР В Р вЂЎ Р В РІР‚пїЅР В РЎвЂ™Р В РІР‚вЂќ Р В РІР‚СњР В РЎвЂ™Р В РЎСљР В РЎСљР В Р’В«Р В РўС’ ===============
 
 if DB_AVAILABLE:
 
@@ -238,7 +238,7 @@ if CHAT_ASSISTANT_AVAILABLE:
 
 
 
-# Р С™Р С•Р Р…РЎвЂћР С‘Р С–РЎС“РЎР‚Р В°РЎвЂ Р С‘РЎРЏ
+# Р В РЎв„ўР В РЎвЂўР В Р вЂ¦Р РЋРІР‚С›Р В РЎвЂР В РЎвЂ“Р РЋРЎвЂњР РЋР вЂљР В Р’В°Р РЋРІР‚В Р В РЎвЂР РЋР РЏ
 
 UPLOAD_FOLDER = 'uploads'
 
@@ -266,13 +266,13 @@ for folder in [UPLOAD_DIR, OUTPUT_JSON_DIR, ANALYSIS_RESULTS_DIR]:
 
 app.config['UPLOAD_FOLDER'] = str(UPLOAD_DIR)
 
-app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10 Р СљР вЂ�
+app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10 Р В РЎС™Р В РІР‚пїЅ
 
 
 
 def allowed_file(filename):
 
-    """Р СџРЎР‚Р С•Р Р†Р ВµРЎР‚Р С”Р В° РЎР‚Р В°РЎРѓРЎв‚¬Р С‘РЎР‚Р ВµР Р…Р С‘РЎРЏ РЎвЂћР В°Р в„–Р В»Р В°"""
+    """Р В РЎСџР РЋР вЂљР В РЎвЂўР В Р вЂ Р В Р’ВµР РЋР вЂљР В РЎвЂќР В Р’В° Р РЋР вЂљР В Р’В°Р РЋР С“Р РЋРІвЂљВ¬Р В РЎвЂР РЋР вЂљР В Р’ВµР В Р вЂ¦Р В РЎвЂР РЋР РЏ Р РЋРІР‚С›Р В Р’В°Р В РІвЂћвЂ“Р В Р’В»Р В Р’В°"""
 
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -282,7 +282,7 @@ def allowed_file(filename):
 
 def index():
 
-    """Р вЂњР В»Р В°Р Р†Р Р…Р В°РЎРЏ РЎРѓРЎвЂљРЎР‚Р В°Р Р…Р С‘РЎвЂ Р В° РЎРѓ РЎвЂћР С•РЎР‚Р С�Р С•Р в„–"""
+    """Р В РІР‚СљР В Р’В»Р В Р’В°Р В Р вЂ Р В Р вЂ¦Р В Р’В°Р РЋР РЏ Р РЋР С“Р РЋРІР‚С™Р РЋР вЂљР В Р’В°Р В Р вЂ¦Р В РЎвЂР РЋРІР‚В Р В Р’В° Р РЋР С“ Р РЋРІР‚С›Р В РЎвЂўР РЋР вЂљР В РЎпїЅР В РЎвЂўР В РІвЂћвЂ“"""
 
     return render_template('form4.html')
 
@@ -304,13 +304,13 @@ def remove_page():
 
 def upload_file():
 
-    """Р С›Р В±РЎР‚Р В°Р В±Р С•РЎвЂљР С”Р В° Р В·Р В°Р С–РЎР‚РЎС“Р В·Р С”Р С‘ РЎвЂћР В°Р в„–Р В»Р В° РЎРѓ Р В°Р Р†РЎвЂљР С•Р С�Р В°РЎвЂљР С‘РЎвЂЎР ВµРЎРѓР С”Р С•Р в„– Р С–Р ВµР Р…Р ВµРЎР‚Р В°РЎвЂ Р С‘Р ВµР в„– Р С–РЎР‚Р В°РЎвЂћР С‘Р С”Р С•Р Р† Р С‘ РЎРѓР С•РЎвЂ¦РЎР‚Р В°Р Р…Р ВµР Р…Р С‘Р ВµР С� Р Р† Р вЂ�Р вЂќ"""
+    """Р В РЎвЂєР В Р’В±Р РЋР вЂљР В Р’В°Р В Р’В±Р В РЎвЂўР РЋРІР‚С™Р В РЎвЂќР В Р’В° Р В Р’В·Р В Р’В°Р В РЎвЂ“Р РЋР вЂљР РЋРЎвЂњР В Р’В·Р В РЎвЂќР В РЎвЂ Р РЋРІР‚С›Р В Р’В°Р В РІвЂћвЂ“Р В Р’В»Р В Р’В° Р РЋР С“ Р В Р’В°Р В Р вЂ Р РЋРІР‚С™Р В РЎвЂўР В РЎпїЅР В Р’В°Р РЋРІР‚С™Р В РЎвЂР РЋРІР‚РЋР В Р’ВµР РЋР С“Р В РЎвЂќР В РЎвЂўР В РІвЂћвЂ“ Р В РЎвЂ“Р В Р’ВµР В Р вЂ¦Р В Р’ВµР РЋР вЂљР В Р’В°Р РЋРІР‚В Р В РЎвЂР В Р’ВµР В РІвЂћвЂ“ Р В РЎвЂ“Р РЋР вЂљР В Р’В°Р РЋРІР‚С›Р В РЎвЂР В РЎвЂќР В РЎвЂўР В Р вЂ  Р В РЎвЂ Р РЋР С“Р В РЎвЂўР РЋРІР‚В¦Р РЋР вЂљР В Р’В°Р В Р вЂ¦Р В Р’ВµР В Р вЂ¦Р В РЎвЂР В Р’ВµР В РЎпїЅ Р В Р вЂ  Р В РІР‚пїЅР В РІР‚Сњ"""
 
     try:
 
         if 'file' not in request.files:
 
-            return jsonify({'error': 'Р В¤Р В°Р в„–Р В» Р Р…Р Вµ Р Р…Р В°Р в„–Р Т‘Р ВµР Р… Р Р† Р В·Р В°Р С—РЎР‚Р С•РЎРѓР Вµ'}), 400
+            return jsonify({'error': 'Р В Р’В¤Р В Р’В°Р В РІвЂћвЂ“Р В Р’В» Р В Р вЂ¦Р В Р’Вµ Р В Р вЂ¦Р В Р’В°Р В РІвЂћвЂ“Р В РўвЂР В Р’ВµР В Р вЂ¦ Р В Р вЂ  Р В Р’В·Р В Р’В°Р В РЎвЂ”Р РЋР вЂљР В РЎвЂўР РЋР С“Р В Р’Вµ'}), 400
 
         
 
@@ -320,17 +320,17 @@ def upload_file():
 
         if file.filename == '':
 
-            return jsonify({'error': 'Р В¤Р В°Р в„–Р В» Р Р…Р Вµ Р Р†РЎвЂ№Р В±РЎР‚Р В°Р Р…'}), 400
+            return jsonify({'error': 'Р В Р’В¤Р В Р’В°Р В РІвЂћвЂ“Р В Р’В» Р В Р вЂ¦Р В Р’Вµ Р В Р вЂ Р РЋРІР‚в„–Р В Р’В±Р РЋР вЂљР В Р’В°Р В Р вЂ¦'}), 400
 
         
 
         if not allowed_file(file.filename):
 
-            return jsonify({'error': 'Р В Р В°Р В·РЎР‚Р ВµРЎв‚¬Р ВµР Р…РЎвЂ№ РЎвЂљР С•Р В»РЎРЉР С”Р С• РЎвЂћР В°Р в„–Р В»РЎвЂ№ Excel (.xls, .xlsx)'}), 400
+            return jsonify({'error': 'Р В Р’В Р В Р’В°Р В Р’В·Р РЋР вЂљР В Р’ВµР РЋРІвЂљВ¬Р В Р’ВµР В Р вЂ¦Р РЋРІР‚в„– Р РЋРІР‚С™Р В РЎвЂўР В Р’В»Р РЋР Р‰Р В РЎвЂќР В РЎвЂў Р РЋРІР‚С›Р В Р’В°Р В РІвЂћвЂ“Р В Р’В»Р РЋРІР‚в„– Excel (.xls, .xlsx)'}), 400
 
         
 
-        # Р РЋР С•РЎвЂ¦РЎР‚Р В°Р Р…РЎРЏР ВµР С� РЎвЂћР В°Р в„–Р В»
+        # Р В Р Р‹Р В РЎвЂўР РЋРІР‚В¦Р РЋР вЂљР В Р’В°Р В Р вЂ¦Р РЋР РЏР В Р’ВµР В РЎпїЅ Р РЋРІР‚С›Р В Р’В°Р В РІвЂћвЂ“Р В Р’В»
 
         filename = secure_filename(file.filename)
 
@@ -340,7 +340,7 @@ def upload_file():
 
         
 
-        # Р СџР В°РЎР‚РЎРѓР С‘Р С� Excel Р Р† JSON
+        # Р В РЎСџР В Р’В°Р РЋР вЂљР РЋР С“Р В РЎвЂР В РЎпїЅ Excel Р В Р вЂ  JSON
 
         json_result = xls_to_json_single(
 
@@ -354,11 +354,11 @@ def upload_file():
 
         if not json_result:
 
-            return jsonify({'error': 'Р С›РЎв‚¬Р С‘Р В±Р С”Р В° Р С—РЎР‚Р С‘ Р С—Р В°РЎР‚РЎРѓР С‘Р Р…Р С–Р Вµ РЎвЂћР В°Р в„–Р В»Р В°'}), 500
+            return jsonify({'error': 'Р В РЎвЂєР РЋРІвЂљВ¬Р В РЎвЂР В Р’В±Р В РЎвЂќР В Р’В° Р В РЎвЂ”Р РЋР вЂљР В РЎвЂ Р В РЎвЂ”Р В Р’В°Р РЋР вЂљР РЋР С“Р В РЎвЂР В Р вЂ¦Р В РЎвЂ“Р В Р’Вµ Р РЋРІР‚С›Р В Р’В°Р В РІвЂћвЂ“Р В Р’В»Р В Р’В°'}), 500
 
         
 
-        # Р вЂ™РЎвЂ№Р С—Р С•Р В»Р Р…РЎРЏР ВµР С� ABC-XYZ Р В°Р Р…Р В°Р В»Р С‘Р В·
+        # Р В РІР‚в„ўР РЋРІР‚в„–Р В РЎвЂ”Р В РЎвЂўР В Р’В»Р В Р вЂ¦Р РЋР РЏР В Р’ВµР В РЎпїЅ ABC-XYZ Р В Р’В°Р В Р вЂ¦Р В Р’В°Р В Р’В»Р В РЎвЂР В Р’В·
 
         analysis_data = perform_abc_xyz_analysis(
 
@@ -372,11 +372,11 @@ def upload_file():
 
         if not analysis_data:
 
-            return jsonify({'error': 'Р С›РЎв‚¬Р С‘Р В±Р С”Р В° Р С—РЎР‚Р С‘ Р Р†РЎвЂ№Р С—Р С•Р В»Р Р…Р ВµР Р…Р С‘Р С‘ Р В°Р Р…Р В°Р В»Р С‘Р В·Р В°'}), 500
+            return jsonify({'error': 'Р В РЎвЂєР РЋРІвЂљВ¬Р В РЎвЂР В Р’В±Р В РЎвЂќР В Р’В° Р В РЎвЂ”Р РЋР вЂљР В РЎвЂ Р В Р вЂ Р РЋРІР‚в„–Р В РЎвЂ”Р В РЎвЂўР В Р’В»Р В Р вЂ¦Р В Р’ВµР В Р вЂ¦Р В РЎвЂР В РЎвЂ Р В Р’В°Р В Р вЂ¦Р В Р’В°Р В Р’В»Р В РЎвЂР В Р’В·Р В Р’В°'}), 500
 
         
 
-        # =============== Р РЋР С›Р ТђР В Р С’Р СњР вЂўР СњР В�Р вЂў Р С’Р СњР С’Р вЂєР В�Р вЂ”Р С’ Р вЂ™ Р вЂ�Р вЂќ Р вЂќР вЂєР Р‡ Р вЂњР В Р С’Р В¤Р В�Р С™Р С›Р вЂ™ ===============
+        # =============== Р В Р Р‹Р В РЎвЂєР В РўС’Р В Р’В Р В РЎвЂ™Р В РЎСљР В РІР‚СћР В РЎСљР В Р’пїЅР В РІР‚Сћ Р В РЎвЂ™Р В РЎСљР В РЎвЂ™Р В РІР‚С”Р В Р’пїЅР В РІР‚вЂќР В РЎвЂ™ Р В РІР‚в„ў Р В РІР‚пїЅР В РІР‚Сњ Р В РІР‚СњР В РІР‚С”Р В Р вЂЎ Р В РІР‚СљР В Р’В Р В РЎвЂ™Р В Р’В¤Р В Р’пїЅР В РЎв„ўР В РЎвЂєР В РІР‚в„ў ===============
 
         db_info = {
 
@@ -396,7 +396,7 @@ def upload_file():
 
             try:
 
-                # Р РЋР С•РЎвЂ¦РЎР‚Р В°Р Р…РЎРЏР ВµР С� Р Р†РЎР‚Р ВµР С�Р ВµР Р…Р Р…РЎвЂ№Р в„– JSON РЎвЂћР В°Р в„–Р В» РЎРѓ РЎР‚Р ВµР В·РЎС“Р В»РЎРЉРЎвЂљР В°РЎвЂљР В°Р С�Р С‘ Р В°Р Р…Р В°Р В»Р С‘Р В·Р В°
+                # Р В Р Р‹Р В РЎвЂўР РЋРІР‚В¦Р РЋР вЂљР В Р’В°Р В Р вЂ¦Р РЋР РЏР В Р’ВµР В РЎпїЅ Р В Р вЂ Р РЋР вЂљР В Р’ВµР В РЎпїЅР В Р’ВµР В Р вЂ¦Р В Р вЂ¦Р РЋРІР‚в„–Р В РІвЂћвЂ“ JSON Р РЋРІР‚С›Р В Р’В°Р В РІвЂћвЂ“Р В Р’В» Р РЋР С“ Р РЋР вЂљР В Р’ВµР В Р’В·Р РЋРЎвЂњР В Р’В»Р РЋР Р‰Р РЋРІР‚С™Р В Р’В°Р РЋРІР‚С™Р В Р’В°Р В РЎпїЅР В РЎвЂ Р В Р’В°Р В Р вЂ¦Р В Р’В°Р В Р’В»Р В РЎвЂР В Р’В·Р В Р’В°
 
                 import tempfile
 
@@ -404,7 +404,7 @@ def upload_file():
 
                 
 
-                # Р РЋР С•Р В·Р Т‘Р В°Р ВµР С� Р Р†РЎР‚Р ВµР С�Р ВµР Р…Р Р…РЎвЂ№Р в„– РЎвЂћР В°Р в„–Р В» РЎРѓ РЎР‚Р ВµР В·РЎС“Р В»РЎРЉРЎвЂљР В°РЎвЂљР В°Р С�Р С‘ Р В°Р Р…Р В°Р В»Р С‘Р В·Р В°
+                # Р В Р Р‹Р В РЎвЂўР В Р’В·Р В РўвЂР В Р’В°Р В Р’ВµР В РЎпїЅ Р В Р вЂ Р РЋР вЂљР В Р’ВµР В РЎпїЅР В Р’ВµР В Р вЂ¦Р В Р вЂ¦Р РЋРІР‚в„–Р В РІвЂћвЂ“ Р РЋРІР‚С›Р В Р’В°Р В РІвЂћвЂ“Р В Р’В» Р РЋР С“ Р РЋР вЂљР В Р’ВµР В Р’В·Р РЋРЎвЂњР В Р’В»Р РЋР Р‰Р РЋРІР‚С™Р В Р’В°Р РЋРІР‚С™Р В Р’В°Р В РЎпїЅР В РЎвЂ Р В Р’В°Р В Р вЂ¦Р В Р’В°Р В Р’В»Р В РЎвЂР В Р’В·Р В Р’В°
 
                 with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as temp_file:
 
@@ -414,7 +414,7 @@ def upload_file():
 
                 
 
-                # Р вЂ”Р В°Р С–РЎР‚РЎС“Р В¶Р В°Р ВµР С� Р В°Р Р…Р В°Р В»Р С‘Р В· Р Р† Р вЂ�Р вЂќ
+                # Р В РІР‚вЂќР В Р’В°Р В РЎвЂ“Р РЋР вЂљР РЋРЎвЂњР В Р’В¶Р В Р’В°Р В Р’ВµР В РЎпїЅ Р В Р’В°Р В Р вЂ¦Р В Р’В°Р В Р’В»Р В РЎвЂР В Р’В· Р В Р вЂ  Р В РІР‚пїЅР В РІР‚Сњ
 
                 db_result = analysis_db.load_analysis_from_json(
 
@@ -426,7 +426,7 @@ def upload_file():
 
                 
 
-                # Р Р€Р Т‘Р В°Р В»РЎРЏР ВµР С� Р Р†РЎР‚Р ВµР С�Р ВµР Р…Р Р…РЎвЂ№Р в„– РЎвЂћР В°Р в„–Р В»
+                # Р В Р в‚¬Р В РўвЂР В Р’В°Р В Р’В»Р РЋР РЏР В Р’ВµР В РЎпїЅ Р В Р вЂ Р РЋР вЂљР В Р’ВµР В РЎпїЅР В Р’ВµР В Р вЂ¦Р В Р вЂ¦Р РЋРІР‚в„–Р В РІвЂћвЂ“ Р РЋРІР‚С›Р В Р’В°Р В РІвЂћвЂ“Р В Р’В»
 
                 os.unlink(temp_file_path)
 
@@ -453,7 +453,7 @@ def upload_file():
 
                 else:
 
-                    db_info['errors'] = db_result.get('errors', ['Р СњР ВµР С‘Р В·Р Р†Р ВµРЎРѓРЎвЂљР Р…Р В°РЎРЏ Р С•РЎв‚¬Р С‘Р В±Р С”Р В°'])
+                    db_info['errors'] = db_result.get('errors', ['Р В РЎСљР В Р’ВµР В РЎвЂР В Р’В·Р В Р вЂ Р В Р’ВµР РЋР С“Р РЋРІР‚С™Р В Р вЂ¦Р В Р’В°Р РЋР РЏ Р В РЎвЂўР РЋРІвЂљВ¬Р В РЎвЂР В Р’В±Р В РЎвЂќР В Р’В°'])
 
                     
 
@@ -470,7 +470,7 @@ def upload_file():
 
         
 
-        # =============== Р вЂ”Р С’Р вЂњР В Р Р€Р вЂ”Р С™Р С’ Р вЂ™ Р С›Р РЋР СњР С›Р вЂ™Р СњР Р€Р В® Р вЂ�Р С’Р вЂ”Р Р€ Р вЂќР С’Р СњР СњР В«Р Тђ ===============
+        # =============== Р В РІР‚вЂќР В РЎвЂ™Р В РІР‚СљР В Р’В Р В Р в‚¬Р В РІР‚вЂќР В РЎв„ўР В РЎвЂ™ Р В РІР‚в„ў Р В РЎвЂєР В Р Р‹Р В РЎСљР В РЎвЂєР В РІР‚в„ўР В РЎСљР В Р в‚¬Р В Р’В® Р В РІР‚пїЅР В РЎвЂ™Р В РІР‚вЂќР В Р в‚¬ Р В РІР‚СњР В РЎвЂ™Р В РЎСљР В РЎСљР В Р’В«Р В РўС’ ===============
 
         main_db_info = {
 
@@ -490,13 +490,13 @@ def upload_file():
 
             try:
 
-                # Р РЋР С•РЎвЂ¦РЎР‚Р В°Р Р…РЎРЏР ВµР С� РЎвЂљР В°Р С”Р В¶Р Вµ Р Р† Р С•РЎРѓР Р…Р С•Р Р†Р Р…РЎС“РЎР‹ Р вЂ�Р вЂќ
+                # Р В Р Р‹Р В РЎвЂўР РЋРІР‚В¦Р РЋР вЂљР В Р’В°Р В Р вЂ¦Р РЋР РЏР В Р’ВµР В РЎпїЅ Р РЋРІР‚С™Р В Р’В°Р В РЎвЂќР В Р’В¶Р В Р’Вµ Р В Р вЂ  Р В РЎвЂўР РЋР С“Р В Р вЂ¦Р В РЎвЂўР В Р вЂ Р В Р вЂ¦Р РЋРЎвЂњР РЋР вЂ№ Р В РІР‚пїЅР В РІР‚Сњ
 
                 temp_file_path = None
 
                 try:
 
-                    # Р РЋР С•Р В·Р Т‘Р В°Р ВµР С� Р Р†РЎР‚Р ВµР С�Р ВµР Р…Р Р…РЎвЂ№Р в„– РЎвЂћР В°Р в„–Р В» Р Т‘Р В»РЎРЏ Р С•РЎРѓР Р…Р С•Р Р†Р Р…Р С•Р в„– Р вЂ�Р вЂќ
+                    # Р В Р Р‹Р В РЎвЂўР В Р’В·Р В РўвЂР В Р’В°Р В Р’ВµР В РЎпїЅ Р В Р вЂ Р РЋР вЂљР В Р’ВµР В РЎпїЅР В Р’ВµР В Р вЂ¦Р В Р вЂ¦Р РЋРІР‚в„–Р В РІвЂћвЂ“ Р РЋРІР‚С›Р В Р’В°Р В РІвЂћвЂ“Р В Р’В» Р В РўвЂР В Р’В»Р РЋР РЏ Р В РЎвЂўР РЋР С“Р В Р вЂ¦Р В РЎвЂўР В Р вЂ Р В Р вЂ¦Р В РЎвЂўР В РІвЂћвЂ“ Р В РІР‚пїЅР В РІР‚Сњ
 
                     with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as temp_file:
 
@@ -524,7 +524,7 @@ def upload_file():
 
                 finally:
 
-                    # Р Р€Р Т‘Р В°Р В»РЎРЏР ВµР С� Р Р†РЎР‚Р ВµР С�Р ВµР Р…Р Р…РЎвЂ№Р в„– РЎвЂћР В°Р в„–Р В»
+                    # Р В Р в‚¬Р В РўвЂР В Р’В°Р В Р’В»Р РЋР РЏР В Р’ВµР В РЎпїЅ Р В Р вЂ Р РЋР вЂљР В Р’ВµР В РЎпїЅР В Р’ВµР В Р вЂ¦Р В Р вЂ¦Р РЋРІР‚в„–Р В РІвЂћвЂ“ Р РЋРІР‚С›Р В Р’В°Р В РІвЂћвЂ“Р В Р’В»
 
                     if temp_file_path and os.path.exists(temp_file_path):
 
@@ -542,7 +542,7 @@ def upload_file():
 
         
 
-        # =============== Р вЂњР вЂўР СњР вЂўР В Р С’Р В¦Р В�Р Р‡ Р вЂњР В Р С’Р В¤Р В�Р С™Р С›Р вЂ™ ===============
+        # =============== Р В РІР‚СљР В РІР‚СћР В РЎСљР В РІР‚СћР В Р’В Р В РЎвЂ™Р В Р’В¦Р В Р’пїЅР В Р вЂЎ Р В РІР‚СљР В Р’В Р В РЎвЂ™Р В Р’В¤Р В Р’пїЅР В РЎв„ўР В РЎвЂєР В РІР‚в„ў ===============
         charts_info = {
             'generated': False,
             'count': 0,
@@ -554,7 +554,7 @@ def upload_file():
 
         
 
-        # Р СџР С•Р Т‘РЎРѓРЎвЂЎР С‘РЎвЂљРЎвЂ№Р Р†Р В°Р ВµР С� РЎРѓРЎвЂљР В°РЎвЂљР С‘РЎРѓРЎвЂљР С‘Р С”РЎС“ Р Т‘Р В»РЎРЏ Р С•РЎвЂљР Р†Р ВµРЎвЂљР В°
+        # Р В РЎСџР В РЎвЂўР В РўвЂР РЋР С“Р РЋРІР‚РЋР В РЎвЂР РЋРІР‚С™Р РЋРІР‚в„–Р В Р вЂ Р В Р’В°Р В Р’ВµР В РЎпїЅ Р РЋР С“Р РЋРІР‚С™Р В Р’В°Р РЋРІР‚С™Р В РЎвЂР РЋР С“Р РЋРІР‚С™Р В РЎвЂР В РЎвЂќР РЋРЎвЂњ Р В РўвЂР В Р’В»Р РЋР РЏ Р В РЎвЂўР РЋРІР‚С™Р В Р вЂ Р В Р’ВµР РЋРІР‚С™Р В Р’В°
 
         abc_stats = {}
 
@@ -590,7 +590,7 @@ def upload_file():
 
         
 
-        # Р С›Р С—РЎР‚Р ВµР Т‘Р ВµР В»РЎРЏР ВµР С� Р С‘Р С�Р ВµР Р…Р В° РЎвЂћР В°Р в„–Р В»Р С•Р Р† Р Т‘Р В»РЎРЏ РЎРѓР С”Р В°РЎвЂЎР С‘Р Р†Р В°Р Р…Р С‘РЎРЏ
+        # Р В РЎвЂєР В РЎвЂ”Р РЋР вЂљР В Р’ВµР В РўвЂР В Р’ВµР В Р’В»Р РЋР РЏР В Р’ВµР В РЎпїЅ Р В РЎвЂР В РЎпїЅР В Р’ВµР В Р вЂ¦Р В Р’В° Р РЋРІР‚С›Р В Р’В°Р В РІвЂћвЂ“Р В Р’В»Р В РЎвЂўР В Р вЂ  Р В РўвЂР В Р’В»Р РЋР РЏ Р РЋР С“Р В РЎвЂќР В Р’В°Р РЋРІР‚РЋР В РЎвЂР В Р вЂ Р В Р’В°Р В Р вЂ¦Р В РЎвЂР РЋР РЏ
 
         analysis_filename = f"{Path(filename).stem}_analysis.json"
 
@@ -600,7 +600,7 @@ def upload_file():
 
             'success': True,
 
-            'message': f'Р В¤Р В°Р в„–Р В» "{filename}" РЎС“РЎРѓР С—Р ВµРЎв‚¬Р Р…Р С• Р С•Р В±РЎР‚Р В°Р В±Р С•РЎвЂљР В°Р Р…',
+            'message': f'Р В Р’В¤Р В Р’В°Р В РІвЂћвЂ“Р В Р’В» "{filename}" Р РЋРЎвЂњР РЋР С“Р В РЎвЂ”Р В Р’ВµР РЋРІвЂљВ¬Р В Р вЂ¦Р В РЎвЂў Р В РЎвЂўР В Р’В±Р РЋР вЂљР В Р’В°Р В Р’В±Р В РЎвЂўР РЋРІР‚С™Р В Р’В°Р В Р вЂ¦',
 
             'original_file': filename,
 
@@ -656,47 +656,75 @@ def upload_file():
 
 @app.route('/upload-combined', methods=['POST'])
 def upload_combined():
-    """Загрузка нескольких Excel файлов и формирование общего отчета."""
+    """Загрузка Excel файлов и формирование общего отчета."""
     try:
-        files = request.files.getlist('files')
-        if not files:
-            return jsonify({'success': False, 'error': 'Файлы не найдены в запросе'}), 400
+        def save_uploaded(file_obj):
+            filename = secure_filename(file_obj.filename)
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file_obj.save(filepath)
+            return filepath
 
-        saved_files = []
-        for file in files:
-            if file and allowed_file(file.filename):
-                original_name = file.filename
-                filename = secure_filename(file.filename)
-                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                file.save(filepath)
-                saved_files.append({
-                    'path': filepath,
-                    'original_name': original_name,
-                    'saved_name': filename
-                })
-
-        if not saved_files:
-            return jsonify({'success': False, 'error': 'Нет валидных Excel файлов (.xls, .xlsx)'}), 400
-
-        def normalize_name(value: str) -> str:
-            return re.sub(r"[^0-9a-z\u0430-\u044f]+", "", value.lower())
-
-        # Определяем файлы по названию (используем оригинальные имена, а не secure_filename)
         file_map = {}
-        for entry in saved_files:
-            name = normalize_name(entry['original_name'])
-            if 'articlemasterdata' in name or 'основныеданные' in name:
-                file_map['master'] = entry['path']
-            elif 'движениястока' in name:
-                file_map['movements'] = entry['path']
-            elif 'линиипикинга' in name:
-                file_map['lines'] = entry['path']
-            elif 'abc' in name and 'анализ' in name:
-                file_map['abc'] = entry['path']
-            elif 'проверказаказано' in name:
-                file_map['order_picked'] = entry['path']
-            elif 'pud' in name or ('отч' in name and 'стоку' in name):
-                file_map['stock'] = entry['path']
+
+        named_files = {
+            'master': request.files.get('master_file'),
+            'movements': request.files.get('movements_file'),
+            'lines': request.files.get('lines_file'),
+            'abc': request.files.get('abc_file'),
+            'order_picked': request.files.get('order_picked_file'),
+            'stock': request.files.get('stock_file'),
+        }
+
+        if any(f and f.filename for f in named_files.values()):
+            missing_named = [key for key, f in named_files.items() if not f or not f.filename]
+            if missing_named:
+                return jsonify({
+                    'success': False,
+                    'error': 'Не все обязательные файлы загружены',
+                    'missing': missing_named
+                }), 400
+
+            for key, file_obj in named_files.items():
+                if not allowed_file(file_obj.filename):
+                    return jsonify({
+                        'success': False,
+                        'error': f'Недопустимый формат файла для {key}. Разрешены только .xls/.xlsx'
+                    }), 400
+                file_map[key] = save_uploaded(file_obj)
+
+        if not file_map:
+            files = request.files.getlist('files')
+            if not files:
+                return jsonify({'success': False, 'error': 'Файлы не найдены в запросе'}), 400
+
+            saved_files = []
+            for file_obj in files:
+                if file_obj and allowed_file(file_obj.filename):
+                    saved_files.append({
+                        'path': save_uploaded(file_obj),
+                        'original_name': file_obj.filename,
+                    })
+
+            if not saved_files:
+                return jsonify({'success': False, 'error': 'Нет валидных Excel файлов (.xls, .xlsx)'}), 400
+
+            def normalize_name(value: str) -> str:
+                return re.sub(r"[^0-9a-z\u0430-\u044f]+", "", value.lower())
+
+            for entry in saved_files:
+                name = normalize_name(entry['original_name'])
+                if 'articlemasterdata' in name or 'основныеданные' in name:
+                    file_map['master'] = entry['path']
+                elif 'движениястока' in name:
+                    file_map['movements'] = entry['path']
+                elif 'линиипикинга' in name:
+                    file_map['lines'] = entry['path']
+                elif 'abc' in name and 'анализ' in name:
+                    file_map['abc'] = entry['path']
+                elif 'проверказаказано' in name:
+                    file_map['order_picked'] = entry['path']
+                elif 'pud' in name or ('отч' in name and 'стоку' in name):
+                    file_map['stock'] = entry['path']
 
         required_keys = ['master', 'movements', 'lines', 'abc', 'order_picked', 'stock']
         missing = [key for key in required_keys if key not in file_map]
@@ -739,7 +767,7 @@ def upload_combined():
 
 @app.route('/download-report/<path:filename>')
 def download_report(filename):
-    """Скачивание сформированного общего отчета."""
+    """РЎРєР°С‡РёРІР°РЅРёРµ СЃС„РѕСЂРјРёСЂРѕРІР°РЅРЅРѕРіРѕ РѕР±С‰РµРіРѕ РѕС‚С‡РµС‚Р°."""
     try:
         return send_from_directory(ANALYSIS_RESULTS_DIR, filename, as_attachment=True)
     except Exception as e:
@@ -748,9 +776,9 @@ def download_report(filename):
 
 @app.route('/api/analysis-data', methods=['GET'])
 def get_analysis_data():
-    """API для получения данных анализа из основной БД"""
+    """API РґР»СЏ РїРѕР»СѓС‡РµРЅРёСЏ РґР°РЅРЅС‹С… Р°РЅР°Р»РёР·Р° РёР· РѕСЃРЅРѕРІРЅРѕР№ Р‘Р”"""
     if not DB_AVAILABLE:
-        return jsonify({'success': False, 'error': 'База данных недоступна'}), 500
+        return jsonify({'success': False, 'error': 'Р‘Р°Р·Р° РґР°РЅРЅС‹С… РЅРµРґРѕСЃС‚СѓРїРЅР°'}), 500
 
     try:
         limit = request.args.get('limit', 1000, type=int)
@@ -789,9 +817,9 @@ def get_analysis_data():
 
 @app.route('/api/check-data')
 def check_data():
-    """Проверка наличия данных в основной БД"""
+    """РџСЂРѕРІРµСЂРєР° РЅР°Р»РёС‡РёСЏ РґР°РЅРЅС‹С… РІ РѕСЃРЅРѕРІРЅРѕР№ Р‘Р”"""
     if not DB_AVAILABLE:
-        return jsonify({'has_data': False, 'error': 'База данных недоступна'}), 500
+        return jsonify({'has_data': False, 'error': 'Р‘Р°Р·Р° РґР°РЅРЅС‹С… РЅРµРґРѕСЃС‚СѓРїРЅР°'}), 500
 
     try:
         session = db.get_session()
@@ -810,9 +838,9 @@ def check_data():
 
 @app.route('/api/check-analysis-data')
 def check_analysis_data():
-    """Проверка наличия данных анализа в основной БД"""
+    """РџСЂРѕРІРµСЂРєР° РЅР°Р»РёС‡РёСЏ РґР°РЅРЅС‹С… Р°РЅР°Р»РёР·Р° РІ РѕСЃРЅРѕРІРЅРѕР№ Р‘Р”"""
     if not DB_AVAILABLE:
-        return jsonify({'has_data': False, 'error': 'База данных недоступна'}), 500
+        return jsonify({'has_data': False, 'error': 'Р‘Р°Р·Р° РґР°РЅРЅС‹С… РЅРµРґРѕСЃС‚СѓРїРЅР°'}), 500
 
     try:
         session = db.get_session()
@@ -831,11 +859,11 @@ def check_analysis_data():
 
 @app.route('/api/charts', methods=['GET'])
 def get_charts():
-    """API для получения или генерации графиков"""
+    """API РґР»СЏ РїРѕР»СѓС‡РµРЅРёСЏ РёР»Рё РіРµРЅРµСЂР°С†РёРё РіСЂР°С„РёРєРѕРІ"""
     if not CHARTS_AVAILABLE:
         return jsonify({'success': False, 'error': 'chart_generator_not_available'}), 500
 
-    # Сначала пробуем получить сохраненные графики
+    # РЎРЅР°С‡Р°Р»Р° РїСЂРѕР±СѓРµРј РїРѕР»СѓС‡РёС‚СЊ СЃРѕС…СЂР°РЅРµРЅРЅС‹Рµ РіСЂР°С„РёРєРё
     if ANALYSIS_DB_AVAILABLE and analysis_db is not None:
         try:
             charts = analysis_db.get_charts()
@@ -854,7 +882,7 @@ def get_charts():
         charts = generator.generate_all_charts()
 
         if charts:
-            # Пытаемся сохранить графики в БД анализа
+            # РџС‹С‚Р°РµРјСЃСЏ СЃРѕС…СЂР°РЅРёС‚СЊ РіСЂР°С„РёРєРё РІ Р‘Р” Р°РЅР°Р»РёР·Р°
             if ANALYSIS_DB_AVAILABLE and analysis_db is not None:
                 try:
                     latest = analysis_db.get_latest_analysis()
@@ -879,8 +907,8 @@ def get_charts():
 
 @app.route('/api/stats', methods=['GET'])
 def get_stats():
-    """API для получения статистики анализа"""
-    # Основной вариант: статистика из основной БД
+    """API РґР»СЏ РїРѕР»СѓС‡РµРЅРёСЏ СЃС‚Р°С‚РёСЃС‚РёРєРё Р°РЅР°Р»РёР·Р°"""
+    # РћСЃРЅРѕРІРЅРѕР№ РІР°СЂРёР°РЅС‚: СЃС‚Р°С‚РёСЃС‚РёРєР° РёР· РѕСЃРЅРѕРІРЅРѕР№ Р‘Р”
     if DB_AVAILABLE:
         session = None
         try:
@@ -957,7 +985,7 @@ def get_stats():
                 except Exception:
                     pass
 
-    # Резервный вариант: статистика из БД анализа
+    # Р РµР·РµСЂРІРЅС‹Р№ РІР°СЂРёР°РЅС‚: СЃС‚Р°С‚РёСЃС‚РёРєР° РёР· Р‘Р” Р°РЅР°Р»РёР·Р°
     if ANALYSIS_DB_AVAILABLE and analysis_db is not None:
         try:
             stats = analysis_db.get_analysis_stats()
@@ -1020,12 +1048,12 @@ def get_stats():
 
 @app.route('/api/chat', methods=['POST'])
 def api_chat():
-    """API чат-ассистента по складской логистике"""
+    """API С‡Р°С‚-Р°СЃСЃРёСЃС‚РµРЅС‚Р° РїРѕ СЃРєР»Р°РґСЃРєРѕР№ Р»РѕРіРёСЃС‚РёРєРµ"""
     if chat_assistant is None:
         return jsonify({
             'success': False,
             'error': 'chat_assistant_not_available',
-            'answer': 'В базе данных нет информации для ответа на этот вопрос.'
+            'answer': 'Р’ Р±Р°Р·Рµ РґР°РЅРЅС‹С… РЅРµС‚ РёРЅС„РѕСЂРјР°С†РёРё РґР»СЏ РѕС‚РІРµС‚Р° РЅР° СЌС‚РѕС‚ РІРѕРїСЂРѕСЃ.'
         }), 500
 
     try:
@@ -1036,14 +1064,14 @@ def api_chat():
         if not message:
             return jsonify({
                 'success': True,
-                'answer': 'В базе данных нет информации для ответа на этот вопрос.',
+                'answer': 'Р’ Р±Р°Р·Рµ РґР°РЅРЅС‹С… РЅРµС‚ РёРЅС„РѕСЂРјР°С†РёРё РґР»СЏ РѕС‚РІРµС‚Р° РЅР° СЌС‚РѕС‚ РІРѕРїСЂРѕСЃ.',
                 'meta': {'source': 'guard'}
             })
 
         result = chat_assistant.answer(message, history=history)
         return jsonify({
             'success': True,
-            'answer': result.get('answer') or 'В базе данных нет информации для ответа на этот вопрос.',
+            'answer': result.get('answer') or 'Р’ Р±Р°Р·Рµ РґР°РЅРЅС‹С… РЅРµС‚ РёРЅС„РѕСЂРјР°С†РёРё РґР»СЏ РѕС‚РІРµС‚Р° РЅР° СЌС‚РѕС‚ РІРѕРїСЂРѕСЃ.',
             'meta': {
                 'source': result.get('source'),
                 'model_loaded': bool(result.get('model_loaded')),
@@ -1054,26 +1082,26 @@ def api_chat():
         return jsonify({
             'success': False,
             'error': str(e),
-            'answer': 'В базе данных нет информации для ответа на этот вопрос.'
+            'answer': 'Р’ Р±Р°Р·Рµ РґР°РЅРЅС‹С… РЅРµС‚ РёРЅС„РѕСЂРјР°С†РёРё РґР»СЏ РѕС‚РІРµС‚Р° РЅР° СЌС‚РѕС‚ РІРѕРїСЂРѕСЃ.'
         }), 500
 
 
 @app.route('/api/delete-by-file', methods=['POST'])
 def delete_by_file():
-    """Удаление данных из БД по Excel файлу"""
+    """РЈРґР°Р»РµРЅРёРµ РґР°РЅРЅС‹С… РёР· Р‘Р” РїРѕ Excel С„Р°Р№Р»Сѓ"""
     if not DB_AVAILABLE:
-        return jsonify({'success': False, 'error': 'База данных недоступна'}), 500
+        return jsonify({'success': False, 'error': 'Р‘Р°Р·Р° РґР°РЅРЅС‹С… РЅРµРґРѕСЃС‚СѓРїРЅР°'}), 500
 
     if 'file' not in request.files:
-        return jsonify({'success': False, 'error': 'Файл не найден в запросе'}), 400
+        return jsonify({'success': False, 'error': 'Р¤Р°Р№Р» РЅРµ РЅР°Р№РґРµРЅ РІ Р·Р°РїСЂРѕСЃРµ'}), 400
 
     file = request.files['file']
 
     if file.filename == '':
-        return jsonify({'success': False, 'error': 'Файл не выбран'}), 400
+        return jsonify({'success': False, 'error': 'Р¤Р°Р№Р» РЅРµ РІС‹Р±СЂР°РЅ'}), 400
 
     if not allowed_file(file.filename):
-        return jsonify({'success': False, 'error': 'Разрешены только файлы Excel (.xls, .xlsx)'}), 400
+        return jsonify({'success': False, 'error': 'Р Р°Р·СЂРµС€РµРЅС‹ С‚РѕР»СЊРєРѕ С„Р°Р№Р»С‹ Excel (.xls, .xlsx)'}), 400
 
     import tempfile
     temp_path = None
@@ -1087,13 +1115,13 @@ def delete_by_file():
     except Exception as e:
         if temp_path and os.path.exists(temp_path):
             os.unlink(temp_path)
-        return jsonify({'success': False, 'error': f'Ошибка чтения Excel: {str(e)}'}), 500
+        return jsonify({'success': False, 'error': f'РћС€РёР±РєР° С‡С‚РµРЅРёСЏ Excel: {str(e)}'}), 500
     finally:
         if temp_path and os.path.exists(temp_path):
             os.unlink(temp_path)
 
     if df is None or df.empty:
-        return jsonify({'success': False, 'error': 'Файл пустой или не содержит данных'}), 400
+        return jsonify({'success': False, 'error': 'Р¤Р°Р№Р» РїСѓСЃС‚РѕР№ РёР»Рё РЅРµ СЃРѕРґРµСЂР¶РёС‚ РґР°РЅРЅС‹С…'}), 400
 
     def normalize_name(value):
         if pd.isna(value):
@@ -1113,7 +1141,7 @@ def delete_by_file():
 
     def normalize_col(value: str) -> str:
         value = value.strip().lower()
-        value = value.replace('ё', 'е')
+        value = value.replace('С‘', 'Рµ')
         for ch in [' ', '\t', '\n', '\r', '.', ',', '-', '_', '/', '\\', '(', ')', '[', ']', '{', '}', '"', "'"]:
             value = value.replace(ch, '')
         return value
@@ -1121,11 +1149,11 @@ def delete_by_file():
     normalized_columns = [normalize_col(col) for col in columns]
 
     name_patterns = [
-        'наимен', 'наименован', 'товар', 'номенклатур', 'product', 'productname',
-        'позиция', 'item', 'title'
+        'РЅР°РёРјРµРЅ', 'РЅР°РёРјРµРЅРѕРІР°РЅ', 'С‚РѕРІР°СЂ', 'РЅРѕРјРµРЅРєР»Р°С‚СѓСЂ', 'product', 'productname',
+        'РїРѕР·РёС†РёСЏ', 'item', 'title'
     ]
     id_patterns = [
-        'id', 'артикул', 'sku', 'article', 'код', 'productid', 'штрихкод', 'barcode', 'ean'
+        'id', 'Р°СЂС‚РёРєСѓР»', 'sku', 'article', 'РєРѕРґ', 'productid', 'С€С‚СЂРёС…РєРѕРґ', 'barcode', 'ean'
     ]
 
     name_columns = [columns[i] for i, col in enumerate(normalized_columns) if any(p in col for p in name_patterns)]
@@ -1177,7 +1205,7 @@ def delete_by_file():
     if not names and not ids:
         return jsonify({
             'success': False,
-            'error': 'Не удалось определить столбцы с ID или наименованием товара',
+            'error': 'РќРµ СѓРґР°Р»РѕСЃСЊ РѕРїСЂРµРґРµР»РёС‚СЊ СЃС‚РѕР»Р±С†С‹ СЃ ID РёР»Рё РЅР°РёРјРµРЅРѕРІР°РЅРёРµРј С‚РѕРІР°СЂР°',
             'columns': columns
         }), 400
 
@@ -1235,7 +1263,7 @@ def delete_by_file():
 
         session.commit()
 
-        # Если все удалено, сбрасываем счетчики ID
+        # Р•СЃР»Рё РІСЃРµ СѓРґР°Р»РµРЅРѕ, СЃР±СЂР°СЃС‹РІР°РµРј СЃС‡РµС‚С‡РёРєРё ID
         try:
             if session.query(Store).count() == 0:
                 try:
@@ -1275,3 +1303,4 @@ def delete_by_file():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
+

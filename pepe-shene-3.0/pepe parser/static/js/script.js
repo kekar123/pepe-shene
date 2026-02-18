@@ -13,6 +13,19 @@ const notificationText = document.getElementById('notification-text');
 const progressFill = document.getElementById('progress-fill');
 const tableBody = document.getElementById('tableBody');
 const combinedFileInput = document.getElementById('combinedFileInput');
+const combinedMasterInput = document.getElementById('combinedMasterInput');
+const combinedMovementsInput = document.getElementById('combinedMovementsInput');
+const combinedLinesInput = document.getElementById('combinedLinesInput');
+const combinedAbcInput = document.getElementById('combinedAbcInput');
+const combinedOrderPickedInput = document.getElementById('combinedOrderPickedInput');
+const combinedStockInput = document.getElementById('combinedStockInput');
+const combinedGenerateBtn = document.getElementById('combinedGenerateBtn');
+const combinedMasterName = document.getElementById('combinedMasterName');
+const combinedMovementsName = document.getElementById('combinedMovementsName');
+const combinedLinesName = document.getElementById('combinedLinesName');
+const combinedAbcName = document.getElementById('combinedAbcName');
+const combinedOrderPickedName = document.getElementById('combinedOrderPickedName');
+const combinedStockName = document.getElementById('combinedStockName');
 const combinedTableBody = document.getElementById('combinedTableBody');
 const combinedReportDownload = document.getElementById('combinedReportDownload');
 const DISABLE_DB_NOTIFICATIONS = window.DISABLE_DB_NOTIFICATIONS === true;
@@ -134,12 +147,42 @@ function setupFileInput() {
 }
 
 function setupCombinedFileInput() {
-    if (!combinedFileInput) return;
-    combinedFileInput.addEventListener('change', function() {
-        if (this.files.length > 0) {
-            processCombinedFiles(Array.from(this.files));
-        }
-    });
+    // Backward compatibility: old single multi-file input.
+    if (combinedFileInput) {
+        combinedFileInput.addEventListener('change', function() {
+            if (this.files.length > 0) {
+                processCombinedFiles(Array.from(this.files));
+            }
+        });
+    }
+
+    // New flow: one input per required file + explicit generate button.
+    const bindName = (inputEl, nameEl) => {
+        if (!inputEl || !nameEl) return;
+        const card = inputEl.closest('.combined-upload-card');
+        const refreshState = () => {
+            const hasFile = !!(inputEl.files && inputEl.files[0]);
+            nameEl.textContent = hasFile ? inputEl.files[0].name : 'Файл не выбран';
+            if (card) {
+                card.classList.toggle('file-selected', hasFile);
+            }
+        };
+        inputEl.addEventListener('change', () => {
+            refreshState();
+        });
+        refreshState();
+    };
+
+    bindName(combinedMasterInput, combinedMasterName);
+    bindName(combinedMovementsInput, combinedMovementsName);
+    bindName(combinedLinesInput, combinedLinesName);
+    bindName(combinedAbcInput, combinedAbcName);
+    bindName(combinedOrderPickedInput, combinedOrderPickedName);
+    bindName(combinedStockInput, combinedStockName);
+
+    if (combinedGenerateBtn) {
+        combinedGenerateBtn.addEventListener('click', processCombinedNamedFiles);
+    }
 }
 
 function processFile(file) {
@@ -256,6 +299,44 @@ function processCombinedFiles(files) {
     uploadCombinedFiles(formData);
 }
 
+function processCombinedNamedFiles() {
+    const required = [
+        { key: 'master_file', input: combinedMasterInput, label: 'Основные данные (Article Master Data)' },
+        { key: 'movements_file', input: combinedMovementsInput, label: 'Движения стока' },
+        { key: 'lines_file', input: combinedLinesInput, label: 'Линии пикинга' },
+        { key: 'abc_file', input: combinedAbcInput, label: 'ABC анализ' },
+        { key: 'order_picked_file', input: combinedOrderPickedInput, label: 'Проверка заказано-собрано' },
+        { key: 'stock_file', input: combinedStockInput, label: 'PUD отчет по стоку' },
+    ];
+
+    const validExtensions = ['.xls', '.xlsx'];
+    const maxSize = 10 * 1024 * 1024;
+    const formData = new FormData();
+
+    for (const item of required) {
+        const file = item.input && item.input.files ? item.input.files[0] : null;
+        if (!file) {
+            showNotification(`Ошибка: не выбран файл "${item.label}"`, 'error');
+            return;
+        }
+
+        const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+        if (!validExtensions.includes(fileExtension)) {
+            showNotification(`Ошибка: "${item.label}" должен быть Excel (.xls, .xlsx)`, 'error');
+            return;
+        }
+        if (file.size > maxSize) {
+            showNotification(`Ошибка: "${item.label}" превышает 10 МБ`, 'error');
+            return;
+        }
+        formData.append(item.key, file);
+    }
+
+    showNotification('Формирование общего отчета...', 'info', { autoHide: false });
+    updateProgress(30);
+    uploadCombinedFiles(formData);
+}
+
 async function uploadCombinedFiles(formData) {
     try {
         updateProgress(50);
@@ -292,6 +373,7 @@ function displayCombinedReport(rows) {
     combinedTableBody.innerHTML = '';
 
     if (!rows || rows.length === 0) {
+        renderCombinedCharts([]);
         combinedTableBody.innerHTML = `
             <tr>
                 <td colspan="22" style="text-align: center; padding: 40px;">
@@ -335,6 +417,118 @@ function displayCombinedReport(rows) {
         `;
         combinedTableBody.appendChild(tr);
     });
+
+    renderCombinedCharts(rows);
+}
+
+function renderCombinedCharts(rows) {
+    const abcChartImg = document.getElementById('combinedAbcChartImage');
+    const chartsContainer = document.getElementById('combinedChartsContainer');
+    const noChartsMessage = document.getElementById('combinedNoChartsMessage');
+    if (!abcChartImg || !chartsContainer || !noChartsMessage) return;
+
+    const counts = { A: 0, B: 0, C: 0 };
+    const total = Array.isArray(rows) ? rows.length : 0;
+
+    rows.forEach(row => {
+        const raw = (row['ABC класс'] ?? '').toString().trim().toUpperCase();
+        if (raw === 'A' || raw === 'B' || raw === 'C') {
+            counts[raw] += 1;
+        }
+    });
+
+    if (!total) {
+        chartsContainer.style.display = 'none';
+        noChartsMessage.style.display = 'block';
+        abcChartImg.removeAttribute('src');
+        abcChartImg.onclick = null;
+        return;
+    }
+
+    chartsContainer.style.display = 'block';
+    noChartsMessage.style.display = 'none';
+
+    const size = 520;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Explicit white background so exported image is not transparent.
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, size, size);
+
+    const values = [counts.A, counts.B, counts.C];
+    const labels = ['A', 'B', 'C'];
+    const colors = ['#2ecc71', '#f39c12', '#e74c3c'];
+
+    let startAngle = -Math.PI / 2;
+    const cx = size / 2;
+    const cy = size / 2;
+    const radius = 170;
+
+    values.forEach((value, index) => {
+        const slice = total > 0 ? (value / total) * Math.PI * 2 : 0;
+        const endAngle = startAngle + slice;
+
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, radius, startAngle, endAngle);
+        ctx.closePath();
+        ctx.fillStyle = colors[index];
+        ctx.fill();
+
+        // подпись сектора
+        if (value > 0) {
+            const mid = startAngle + slice / 2;
+            const tx = cx + Math.cos(mid) * (radius * 0.65);
+            const ty = cy + Math.sin(mid) * (radius * 0.65);
+            const pct = ((value / total) * 100).toFixed(1);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 22px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(`${labels[index]} ${pct}%`, tx, ty);
+        }
+
+        startAngle = endAngle;
+    });
+
+    // центральный круг и общее число
+    ctx.beginPath();
+    ctx.arc(cx, cy, 78, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.fillStyle = '#1f2f46';
+    ctx.font = 'bold 34px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(String(total), cx, cy - 8);
+    ctx.font = '16px Arial';
+    ctx.fillStyle = '#5a6d88';
+    ctx.fillText('товаров', cx, cy + 20);
+
+    // легенда
+    const legendY = size - 90;
+    labels.forEach((label, i) => {
+        const x = 85 + i * 145;
+        const value = values[i];
+        const pct = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
+        ctx.fillStyle = colors[i];
+        ctx.fillRect(x, legendY, 18, 18);
+        ctx.fillStyle = '#1f2f46';
+        ctx.font = 'bold 16px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText(`${label}: ${value} (${pct}%)`, x + 26, legendY + 14);
+    });
+
+    abcChartImg.src = canvas.toDataURL('image/png');
+    abcChartImg.alt = 'ABC анализ';
+    abcChartImg.onclick = () => openFullscreenChart(
+        'combinedAbcChartImage',
+        'ABC Анализ',
+        'Распределение товаров по классам A, B, C в общем отчете.'
+    );
 }
 
 function displayAnalysisStats(data) {
