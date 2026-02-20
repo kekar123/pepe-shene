@@ -200,7 +200,7 @@ def _load_picking_lines(path: Path) -> pd.DataFrame:
     picked_units_col = _find_column(df.columns, ["ШТ_ДЛЯ_СБОРКИ", "Собрано шт", "ШТУК_ЗАКАЗАНО"])
 
     if not article_col:
-        return pd.DataFrame(columns=["article", "orders_count", "last_out_date", "picked_boxes", "picked_units"])
+        return pd.DataFrame(columns=["article", "orders_count", "first_out_date", "last_out_date", "picked_boxes", "picked_units", "pick_days_count"])
 
     df = df.copy()
     df["article"] = df[article_col].apply(_clean_article)
@@ -225,11 +225,29 @@ def _load_picking_lines(path: Path) -> pd.DataFrame:
         .rename(columns={"orders_count": "orders_count"})
     )
 
-    last_dates = (
+    date_stats = (
         df.groupby("article")["last_out_date"]
-        .max()
+        .agg(first_out_date="min", last_out_date="max")
         .reset_index()
     )
+
+    # Даты подбора в коробах (берем только строки, где собраны короба)
+    if date_col:
+        df_pick_dates = df_pick.copy()
+        df_pick_dates["pick_date"] = pd.to_datetime(df_pick_dates[date_col], errors="coerce")
+        df_pick_dates["pick_boxes"] = pd.to_numeric(df_pick_dates[picked_boxes_col], errors="coerce").fillna(0) if picked_boxes_col else 0
+        df_pick_dates = df_pick_dates[df_pick_dates["pick_boxes"] > 0]
+        pick_days = (
+            df_pick_dates.groupby("article")["pick_date"]
+            .agg(
+                first_pick_date="min",
+                last_pick_date="max",
+                pick_days_count=lambda x: x.dropna().dt.date.nunique()
+            )
+            .reset_index()
+        )
+    else:
+        pick_days = pd.DataFrame(columns=["article", "first_pick_date", "last_pick_date", "pick_days_count"])
 
     picks = (
         df_pick.groupby("article")
@@ -240,7 +258,11 @@ def _load_picking_lines(path: Path) -> pd.DataFrame:
         .reset_index()
     )
 
-    combined = orders.merge(last_dates, on="article", how="outer").merge(picks, on="article", how="outer")
+    combined = (
+        orders.merge(date_stats, on="article", how="outer")
+        .merge(picks, on="article", how="outer")
+        .merge(pick_days, on="article", how="outer")
+    )
     return combined
 
 
@@ -291,6 +313,51 @@ def _compute_abc_classes(df: pd.DataFrame, value_col: str) -> pd.DataFrame:
         return "C"
 
     data["abc_class"] = data["cumulative"].apply(classify)
+    return data[["article", "abc_class"]]
+
+
+def _compute_abc_classes_by_frequency(picking_lines: pd.DataFrame) -> pd.DataFrame:
+    data = picking_lines.copy()
+    if data.empty or "article" not in data.columns:
+        return pd.DataFrame(columns=["article", "abc_class"])
+
+    data["pick_days_count"] = pd.to_numeric(data.get("pick_days_count"), errors="coerce").fillna(0)
+    data["first_pick_date"] = pd.to_datetime(data.get("first_pick_date"), errors="coerce")
+    data["last_pick_date"] = pd.to_datetime(data.get("last_pick_date"), errors="coerce")
+
+    global_min = data["first_pick_date"].min()
+    global_max = data["last_pick_date"].max()
+    if pd.isna(global_min) or pd.isna(global_max):
+        global_period_days = 0
+    else:
+        global_period_days = max((global_max.date() - global_min.date()).days, 0)
+
+    def avg_interval_days(row) -> float:
+        pick_days = float(row.get("pick_days_count") or 0)
+        first = row.get("first_pick_date")
+        last = row.get("last_pick_date")
+
+        if pick_days <= 1:
+            # Если подбор в коробах был один раз, берем общий период выгрузки.
+            return float(global_period_days or 9999)
+
+        if pd.isna(first) or pd.isna(last):
+            return float(global_period_days or 9999)
+
+        period_days = max((last.date() - first.date()).days, 0)
+        intervals = max(pick_days - 1, 1)
+        return period_days / intervals if intervals else float(global_period_days or 9999)
+
+    data["avg_interval_days"] = data.apply(avg_interval_days, axis=1)
+
+    def classify(days: float) -> str:
+        if days <= 14:
+            return "A"
+        if days <= 30:
+            return "B"
+        return "C"
+
+    data["abc_class"] = data["avg_interval_days"].apply(classify)
     return data[["article", "abc_class"]]
 
 
@@ -377,7 +444,7 @@ def generate_combined_report(
     report["aisle"] = report["aisle"].fillna(report.get("aisle_order"))
     report["place"] = report["place"].fillna(report.get("place_order"))
 
-    abc_classes = _compute_abc_classes(abc_data, "total_boxes") if not abc_data.empty else pd.DataFrame(columns=["article", "abc_class"])
+    abc_classes = _compute_abc_classes_by_frequency(picking_lines)
     report = report.merge(abc_classes, on="article", how="left")
 
     reappro_pop = _compute_popularity(report.fillna(0), "reappro_boxes", "percent_reappro", "popularity_reappro")
