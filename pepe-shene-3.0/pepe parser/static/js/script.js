@@ -376,7 +376,7 @@ function displayCombinedReport(rows) {
         renderCombinedCharts([]);
         combinedTableBody.innerHTML = `
             <tr>
-                <td colspan="22" style="text-align: center; padding: 40px;">
+                <td colspan="24" style="text-align: center; padding: 40px;">
                     Нет данных для общего отчета
                 </td>
             </tr>
@@ -406,13 +406,15 @@ function displayCombinedReport(rows) {
             <td>${row['Выход в штуках'] ?? 0}</td>
             <td>${row['Палетизация'] ?? ''}</td>
             <td>${row['PCB'] ?? ''}</td>
+            <td>${row['Вес'] ?? ''}</td>
             <td>${row['ABC класс'] ?? ''}</td>
+            <td>${row['ABC класс (вес)'] ?? ''}</td>
             <td>${row['Стокаж'] ?? ''}</td>
             <td>${row['Кол-во линий'] ?? 0}</td>
-            <td>${(row['Процент (реаппро)'] ?? 0).toFixed ? row['Процент (реаппро)'].toFixed(2) : (row['Процент (реаппро)'] ?? 0)}</td>
-            <td>${(row['Популярность (реаппро)'] ?? 0).toFixed ? row['Популярность (реаппро)'].toFixed(2) : (row['Популярность (реаппро)'] ?? 0)}</td>
-            <td>${(row['Процент (линии)'] ?? 0).toFixed ? row['Процент (линии)'].toFixed(2) : (row['Процент (линии)'] ?? 0)}</td>
-            <td>${(row['Популярность (линии)'] ?? 0).toFixed ? row['Популярность (линии)'].toFixed(2) : (row['Популярность (линии)'] ?? 0)}</td>
+            <td>${formatPercentValue(row['Процент (реаппро)'])}</td>
+            <td>${formatPercentValue(row['Популярность (реаппро)'])}</td>
+            <td>${formatPercentValue(row['Процент (линии)'])}</td>
+            <td>${formatPercentValue(row['Популярность (линии)'])}</td>
             <td>${row['Мертвый сток'] ?? ''}</td>
         `;
         combinedTableBody.appendChild(tr);
@@ -421,48 +423,38 @@ function displayCombinedReport(rows) {
     renderCombinedCharts(rows);
 }
 
-function renderCombinedCharts(rows) {
-    const abcChartImg = document.getElementById('combinedAbcChartImage');
-    const chartsContainer = document.getElementById('combinedChartsContainer');
-    const noChartsMessage = document.getElementById('combinedNoChartsMessage');
-    if (!abcChartImg || !chartsContainer || !noChartsMessage) return;
+function formatPercentValue(value) {
+    const num = Number(value ?? 0);
+    if (!Number.isFinite(num)) return '0,00%';
+    return `${num.toFixed(2).replace('.', ',')}%`;
+}
 
+function renderPieToImage(rows, key, imageEl, title, description) {
     const counts = { A: 0, B: 0, C: 0 };
     const total = Array.isArray(rows) ? rows.length : 0;
-
     rows.forEach(row => {
-        const raw = (row['ABC класс'] ?? '').toString().trim().toUpperCase();
-        if (raw === 'A' || raw === 'B' || raw === 'C') {
-            counts[raw] += 1;
-        }
+        const raw = (row[key] ?? '').toString().trim().toUpperCase();
+        if (raw === 'A' || raw === 'B' || raw === 'C') counts[raw] += 1;
     });
-
     if (!total) {
-        chartsContainer.style.display = 'none';
-        noChartsMessage.style.display = 'block';
-        abcChartImg.removeAttribute('src');
-        abcChartImg.onclick = null;
-        return;
+        imageEl.removeAttribute('src');
+        imageEl.onclick = null;
+        return false;
     }
-
-    chartsContainer.style.display = 'block';
-    noChartsMessage.style.display = 'none';
 
     const size = 520;
     const canvas = document.createElement('canvas');
     canvas.width = size;
     canvas.height = size;
     const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    if (!ctx) return false;
 
-    // Explicit white background so exported image is not transparent.
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, size, size);
 
     const values = [counts.A, counts.B, counts.C];
     const labels = ['A', 'B', 'C'];
     const colors = ['#2ecc71', '#f39c12', '#e74c3c'];
-
     let startAngle = -Math.PI / 2;
     const cx = size / 2;
     const cy = size / 2;
@@ -471,7 +463,6 @@ function renderCombinedCharts(rows) {
     values.forEach((value, index) => {
         const slice = total > 0 ? (value / total) * Math.PI * 2 : 0;
         const endAngle = startAngle + slice;
-
         ctx.beginPath();
         ctx.moveTo(cx, cy);
         ctx.arc(cx, cy, radius, startAngle, endAngle);
@@ -479,7 +470,6 @@ function renderCombinedCharts(rows) {
         ctx.fillStyle = colors[index];
         ctx.fill();
 
-        // подпись сектора
         if (value > 0) {
             const mid = startAngle + slice / 2;
             const tx = cx + Math.cos(mid) * (radius * 0.65);
@@ -495,7 +485,6 @@ function renderCombinedCharts(rows) {
         startAngle = endAngle;
     });
 
-    // центральный круг и общее число
     ctx.beginPath();
     ctx.arc(cx, cy, 78, 0, Math.PI * 2);
     ctx.fillStyle = '#ffffff';
@@ -508,7 +497,6 @@ function renderCombinedCharts(rows) {
     ctx.fillStyle = '#5a6d88';
     ctx.fillText('товаров', cx, cy + 20);
 
-    // легенда
     const legendY = size - 90;
     labels.forEach((label, i) => {
         const x = 85 + i * 145;
@@ -522,13 +510,45 @@ function renderCombinedCharts(rows) {
         ctx.fillText(`${label}: ${value} (${pct}%)`, x + 26, legendY + 14);
     });
 
-    abcChartImg.src = canvas.toDataURL('image/png');
-    abcChartImg.alt = 'ABC анализ';
-    abcChartImg.onclick = () => openFullscreenChart(
-        'combinedAbcChartImage',
+    imageEl.src = canvas.toDataURL('image/png');
+    imageEl.onclick = () => openFullscreenChart(imageEl.id, title, description);
+    return true;
+}
+
+function renderCombinedCharts(rows) {
+    const abcChartImg = document.getElementById('combinedAbcChartImage');
+    const weightAbcChartImg = document.getElementById('combinedWeightAbcChartImage');
+    const chartsContainer = document.getElementById('combinedChartsContainer');
+    const noChartsMessage = document.getElementById('combinedNoChartsMessage');
+    if (!abcChartImg || !weightAbcChartImg || !chartsContainer || !noChartsMessage) return;
+
+    if (!rows || rows.length === 0) {
+        chartsContainer.style.display = 'none';
+        noChartsMessage.style.display = 'block';
+        abcChartImg.removeAttribute('src');
+        weightAbcChartImg.removeAttribute('src');
+        abcChartImg.onclick = null;
+        weightAbcChartImg.onclick = null;
+        return;
+    }
+
+    const hasMainAbc = renderPieToImage(
+        rows,
+        'ABC класс',
+        abcChartImg,
         'ABC Анализ',
         'Распределение товаров по классам A, B, C в общем отчете.'
     );
+    const hasWeightAbc = renderPieToImage(
+        rows,
+        'ABC класс (вес)',
+        weightAbcChartImg,
+        'ABC Категории по весу',
+        'Распределение товаров по весовым категориям A, B, C.'
+    );
+
+    chartsContainer.style.display = (hasMainAbc || hasWeightAbc) ? 'block' : 'none';
+    noChartsMessage.style.display = (hasMainAbc || hasWeightAbc) ? 'none' : 'block';
 }
 
 function displayAnalysisStats(data) {

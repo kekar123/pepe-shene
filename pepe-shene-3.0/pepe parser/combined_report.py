@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import re
 from dataclasses import dataclass
@@ -13,23 +13,51 @@ def _normalize(text: str) -> str:
     if text is None:
         return ""
     value = str(text).strip().lower()
-    value = re.sub(r"[^0-9a-zа-я]+", "", value, flags=re.IGNORECASE)
-    return value
+    # Keep only alphanumeric symbols (works for latin/cyrillic and avoids mojibake regex issues).
+    return "".join(ch for ch in value if ch.isalnum())
 
 
 def _find_column(columns: Iterable, candidates: List[str]) -> Optional[str]:
-    normalized = { _normalize(col): col for col in columns }
+    normalized = {}
+    for col in columns:
+        norm = _normalize(col)
+        if norm:
+            normalized[norm] = col
     for cand in candidates:
         cand_norm = _normalize(cand)
+        if not cand_norm:
+            continue
         if cand_norm in normalized:
             return normalized[cand_norm]
     # fallback: partial match
     for cand in candidates:
         cand_norm = _normalize(cand)
+        if not cand_norm:
+            continue
         for norm_col, original in normalized.items():
             if cand_norm and cand_norm in norm_col:
                 return original
     return None
+
+
+def _column_by_index(columns: Iterable, index: int) -> Optional[str]:
+    cols = list(columns)
+    if 0 <= index < len(cols):
+        return cols[index]
+    return None
+
+
+def _is_reappro_reason(value) -> bool:
+    """
+    Reappro includes pallet drop/pallet preparation operations.
+    """
+    norm = _normalize(value)
+    if not norm:
+        return False
+    has_pallet = "пал" in norm or "pallet" in norm
+    is_drop = "спуск" in norm or "drop" in norm
+    is_prepare = "подготов" in norm or "prepare" in norm
+    return has_pallet and (is_drop or is_prepare)
 
 
 def _clean_article(value) -> Optional[str]:
@@ -65,7 +93,13 @@ def _load_master_data(path: Path) -> pd.DataFrame:
     name_col = _find_column(df.columns, ["Имя артикула", "Article Name"])
     pcb_col = _find_column(df.columns, ["Шт в коробе", "Pieces Per Case"])
     stockage_col = _find_column(df.columns, ["Класс стокажа", "Storage Class"])
-
+    weight_col = _find_column(df.columns, ["Weight", "Вес", "Вес\\Weight", "Weight\\Вес"])
+    # Fallbacks by expected layout from master file (C,D,M,J,T columns).
+    code_col = code_col or _column_by_index(df.columns, 2)
+    name_col = name_col or _column_by_index(df.columns, 3)
+    pcb_col = pcb_col or _column_by_index(df.columns, 12)
+    weight_col = weight_col or _column_by_index(df.columns, 9)
+    stockage_col = stockage_col or _column_by_index(df.columns, 19)
     cols = {}
     if code_col:
         cols["article"] = df[code_col].apply(_clean_article)
@@ -75,10 +109,13 @@ def _load_master_data(path: Path) -> pd.DataFrame:
         cols["pcb"] = df[pcb_col]
     if stockage_col:
         cols["stockage"] = df[stockage_col]
-
+    if weight_col:
+        cols["weight"] = df[weight_col]
     result = pd.DataFrame(cols)
+    if "article" not in result.columns:
+        return pd.DataFrame(columns=["article", "name", "pcb", "stockage", "weight"])
     result = result.dropna(subset=["article"])
-    # Убираем строку-шапку на английском, если попала в данные
+    # РЈР±РёСЂР°РµРј СЃС‚СЂРѕРєСѓ-С€Р°РїРєСѓ РЅР° Р°РЅРіР»РёР№СЃРєРѕРј, РµСЃР»Рё РїРѕРїР°Р»Р° РІ РґР°РЅРЅС‹Рµ
     result = result[result["article"].astype(str).str.strip().str.lower().ne("article code")]
     return result
 
@@ -119,6 +156,11 @@ def _load_order_picked(path: Path) -> pd.DataFrame:
     picked_boxes_col = _find_column(df.columns, ["Собрано кор.", "Собрано кор", "Собрано"])
     aisle_col = _find_column(df.columns, ["Аллея"])
     place_col = _find_column(df.columns, ["Место"])
+    # Fallbacks by expected layout from order-picked file (D,H,M,N columns).
+    article_col = article_col or _column_by_index(df.columns, 3)
+    picked_boxes_col = picked_boxes_col or _column_by_index(df.columns, 7)
+    aisle_col = aisle_col or _column_by_index(df.columns, 12)
+    place_col = place_col or _column_by_index(df.columns, 13)
 
     data = pd.DataFrame()
     if article_col:
@@ -130,6 +172,8 @@ def _load_order_picked(path: Path) -> pd.DataFrame:
     if place_col:
         data["place"] = df[place_col]
 
+    if "article" not in data.columns:
+        return pd.DataFrame(columns=["article", "max_pick", "lines_count", "aisle", "place"])
     data = data.dropna(subset=["article"])
 
     if "aisle" not in data.columns:
@@ -153,6 +197,12 @@ def _load_stock_movements(path: Path) -> pd.DataFrame:
     pallets_col = _find_column(df.columns, ["Номер паллета", "SSCC"])
     boxes_col = _find_column(df.columns, ["Коробов", "Коробки"])
     units_col = _find_column(df.columns, ["Штук", "ШТУК"])
+    # Fallbacks by expected layout from stock movements file.
+    reason_col = reason_col or _column_by_index(df.columns, 1)
+    article_col = article_col or _column_by_index(df.columns, 12)
+    pallets_col = pallets_col or _column_by_index(df.columns, 8) or _column_by_index(df.columns, 7)
+    units_col = units_col or _column_by_index(df.columns, 15)
+    boxes_col = boxes_col or _column_by_index(df.columns, 16)
 
     if not reason_col or not article_col:
         return pd.DataFrame(columns=["article", "reappro_pallets", "reappro_boxes", "reappro_units"])
@@ -162,7 +212,7 @@ def _load_stock_movements(path: Path) -> pd.DataFrame:
     df["reason"] = df[reason_col].astype(str).str.lower()
     df = df.dropna(subset=["article"])
 
-    filtered = df[df["reason"].str.contains("спуск") & df["reason"].str.contains("палл", na=False)]
+    filtered = df[df["reason"].apply(_is_reappro_reason)]
     if filtered.empty:
         return pd.DataFrame(columns=["article", "reappro_pallets", "reappro_boxes", "reappro_units"])
 
@@ -198,6 +248,13 @@ def _load_picking_lines(path: Path) -> pd.DataFrame:
     support_type_col = _find_column(df.columns, ["ТИП_СУППОРТА", "Тип суппорта"])
     picked_boxes_col = _find_column(df.columns, ["СОБРАНО_КОР", "Собрано кор"])
     picked_units_col = _find_column(df.columns, ["ШТ_ДЛЯ_СБОРКИ", "Собрано шт", "ШТУК_ЗАКАЗАНО"])
+    # Fallbacks by expected layout from picking lines file.
+    article_col = article_col or _column_by_index(df.columns, 12)
+    order_col = order_col or _column_by_index(df.columns, 2)
+    date_col = date_col or _column_by_index(df.columns, 3)
+    support_type_col = support_type_col or _column_by_index(df.columns, 6)
+    picked_boxes_col = picked_boxes_col or _column_by_index(df.columns, 19)
+    picked_units_col = picked_units_col or _column_by_index(df.columns, 21) or _column_by_index(df.columns, 20)
 
     if not article_col:
         return pd.DataFrame(columns=["article", "orders_count", "first_out_date", "last_out_date", "picked_boxes", "picked_units", "pick_days_count"])
@@ -231,7 +288,7 @@ def _load_picking_lines(path: Path) -> pd.DataFrame:
         .reset_index()
     )
 
-    # Даты подбора в коробах (берем только строки, где собраны короба)
+    # Р”Р°С‚С‹ РїРѕРґР±РѕСЂР° РІ РєРѕСЂРѕР±Р°С… (Р±РµСЂРµРј С‚РѕР»СЊРєРѕ СЃС‚СЂРѕРєРё, РіРґРµ СЃРѕР±СЂР°РЅС‹ РєРѕСЂРѕР±Р°)
     if date_col:
         df_pick_dates = df_pick.copy()
         df_pick_dates["pick_date"] = pd.to_datetime(df_pick_dates[date_col], errors="coerce")
@@ -268,14 +325,18 @@ def _load_picking_lines(path: Path) -> pd.DataFrame:
 
 def _load_abc_analysis(path: Path) -> pd.DataFrame:
     df = _read_excel(path, sheet_name=0, header=0)
-    # Убираем строку-шапку, если она продублирована как первая строка данных
+    # РЈР±РёСЂР°РµРј СЃС‚СЂРѕРєСѓ-С€Р°РїРєСѓ, РµСЃР»Рё РѕРЅР° РїСЂРѕРґСѓР±Р»РёСЂРѕРІР°РЅР° РєР°Рє РїРµСЂРІР°СЏ СЃС‚СЂРѕРєР° РґР°РЅРЅС‹С…
     if not df.empty:
         first_row = df.iloc[0].tolist()
-        if any('артикул' in str(cell).strip().lower() for cell in first_row):
+        if any("артикул" in str(cell).strip().lower() for cell in first_row):
             df = df.iloc[1:].reset_index(drop=True)
     article_col = _find_column(df.columns, ["Артикул", "АРТИКУЛ"])
     total_boxes_col = _find_column(df.columns, ["Коробов всего", "Коробов всего "])
     palletization_col = _find_column(df.columns, ["Паллетизация"])
+    # Fallbacks by expected layout from ABC file (A,I,O columns).
+    article_col = article_col or _column_by_index(df.columns, 0)
+    total_boxes_col = total_boxes_col or _column_by_index(df.columns, 8)
+    palletization_col = palletization_col or _column_by_index(df.columns, 14)
 
     data = pd.DataFrame()
     if article_col:
@@ -285,6 +346,8 @@ def _load_abc_analysis(path: Path) -> pd.DataFrame:
     if palletization_col:
         data["palletization"] = df[palletization_col]
 
+    if "article" not in data.columns:
+        return pd.DataFrame(columns=["article", "total_boxes", "palletization"])
     data = data.dropna(subset=["article"])
     grouped = data.groupby("article").agg(
         total_boxes=("total_boxes", "sum"),
@@ -338,7 +401,7 @@ def _compute_abc_classes_by_frequency(picking_lines: pd.DataFrame) -> pd.DataFra
         last = row.get("last_pick_date")
 
         if pick_days <= 1:
-            # Если подбор в коробах был один раз, берем общий период выгрузки.
+            # Р•СЃР»Рё РїРѕРґР±РѕСЂ РІ РєРѕСЂРѕР±Р°С… Р±С‹Р» РѕРґРёРЅ СЂР°Р·, Р±РµСЂРµРј РѕР±С‰РёР№ РїРµСЂРёРѕРґ РІС‹РіСЂСѓР·РєРё.
             return float(global_period_days or 9999)
 
         if pd.isna(first) or pd.isna(last):
@@ -374,6 +437,36 @@ def _compute_popularity(df: pd.DataFrame, value_col: str, percent_col: str, popu
     data[percent_col] = data[value_col] / total * 100
     data[popularity_col] = data[percent_col].cumsum()
     return data[["article", percent_col, popularity_col]]
+
+
+
+def _parse_weight_kg(value) -> Optional[float]:
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+
+    text = str(value).strip().replace(",", ".")
+    match = re.search(r"-?\d+(?:\.\d+)?", text)
+    if not match:
+        return None
+    try:
+        return float(match.group(0))
+    except ValueError:
+        return None
+
+
+def _weight_abc_class(value) -> Optional[str]:
+    weight = _parse_weight_kg(value)
+    if weight is None:
+        return None
+    if 0.1 <= weight <= 1.5:
+        return "C"
+    if 1.6 <= weight <= 5.0:
+        return "B"
+    if 5.1 <= weight <= 20.0:
+        return "A"
+    return None
 
 
 def _dead_stock_status(last_out_date: Optional[pd.Timestamp]) -> str:
@@ -452,7 +545,7 @@ def generate_combined_report(
 
     report = report.merge(reappro_pop, on="article", how="left")
     report = report.merge(lines_pop, on="article", how="left")
-
+    report["weight_abc_class"] = report.get("weight").apply(_weight_abc_class)
     report["dead_stock_status"] = report["last_out_date"].apply(_dead_stock_status)
     report["dead_stock_rank"] = report["last_out_date"].apply(_dead_stock_sort_rank)
     report = report.sort_values(by=["dead_stock_rank", "article"], ascending=[True, True]).reset_index(drop=True)
@@ -473,7 +566,9 @@ def generate_combined_report(
         "Выход в штуках": report.get("picked_units", 0).fillna(0),
         "Палетизация": report.get("palletization"),
         "PCB": report.get("pcb"),
+        "Вес": report.get("weight"),
         "ABC класс": report.get("abc_class"),
+        "ABC класс (вес)": report.get("weight_abc_class"),
         "Стокаж": report.get("stockage"),
         "Кол-во линий": report.get("lines_count", 0).fillna(0),
         "Процент (реаппро)": report.get("percent_reappro", 0).fillna(0),
@@ -487,6 +582,9 @@ def generate_combined_report(
         output["Дата последнего выхода"] = output["Дата последнего выхода"].apply(
             lambda value: value.strftime("%Y-%m-%d") if isinstance(value, pd.Timestamp) else ("" if pd.isna(value) else str(value))
         )
+    for percent_col in ["Процент (реаппро)", "Популярность (реаппро)", "Процент (линии)", "Популярность (линии)"]:
+        if percent_col in output.columns:
+            output[percent_col] = pd.to_numeric(output[percent_col], errors="coerce").fillna(0).round(2)
 
     output_dir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -495,9 +593,9 @@ def generate_combined_report(
         output.to_excel(writer, index=False, sheet_name="Отчет")
         worksheet = writer.sheets["Отчет"]
 
-        # Ширины колонок
-        worksheet.column_dimensions["A"].width = 18   # Артикул
-        worksheet.column_dimensions["B"].width = 45   # Название
+        # РЁРёСЂРёРЅС‹ РєРѕР»РѕРЅРѕРє
+        worksheet.column_dimensions["A"].width = 18   # РђСЂС‚РёРєСѓР»
+        worksheet.column_dimensions["B"].width = 45   # РќР°Р·РІР°РЅРёРµ
         worksheet.column_dimensions["C"].width = 16
         worksheet.column_dimensions["D"].width = 16
         worksheet.column_dimensions["E"].width = 12
@@ -510,24 +608,20 @@ def generate_combined_report(
         worksheet.column_dimensions["L"].width = 18
         worksheet.column_dimensions["M"].width = 14
         worksheet.column_dimensions["N"].width = 14
-        worksheet.column_dimensions["O"].width = 14
+        worksheet.column_dimensions["O"].width = 12
         worksheet.column_dimensions["P"].width = 14
         worksheet.column_dimensions["Q"].width = 14
-        worksheet.column_dimensions["R"].width = 18
+        worksheet.column_dimensions["R"].width = 14
         worksheet.column_dimensions["S"].width = 18
         worksheet.column_dimensions["T"].width = 18
         worksheet.column_dimensions["U"].width = 18
-        worksheet.column_dimensions["V"].width = 16
+        worksheet.column_dimensions["V"].width = 18
+        worksheet.column_dimensions["W"].width = 16
 
-        # Перенос текста и высота строк
+        # РџРµСЂРµРЅРѕСЃ С‚РµРєСЃС‚Р° Рё РІС‹СЃРѕС‚Р° СЃС‚СЂРѕРє
         from openpyxl.styles import Alignment, Font, PatternFill
         header_fill = PatternFill(fill_type="solid", start_color="00008B", end_color="00008B")
         header_font = Font(color="FFFFFF", bold=True)
-        dead_stock_fills = {
-            "РєСЂР°СЃРЅС‹Р№": PatternFill(fill_type="solid", start_color="FF0000", end_color="FF0000"),
-            "Р¶РµР»С‚С‹Р№": PatternFill(fill_type="solid", start_color="FFFF00", end_color="FFFF00"),
-            "Р·РµР»РµРЅС‹Р№": PatternFill(fill_type="solid", start_color="00B050", end_color="00B050"),
-        }
         for cell in worksheet[1]:
             cell.fill = header_fill
             cell.font = header_font
@@ -537,7 +631,7 @@ def generate_combined_report(
             "green": PatternFill(fill_type="solid", start_color="FF00B050", end_color="FF00B050"),
         }
 
-        # Подсветка артикула (колонка A) по статусу "Мертвый сток" (последняя колонка)
+        # РџРѕРґСЃРІРµС‚РєР° Р°СЂС‚РёРєСѓР»Р° (РєРѕР»РѕРЅРєР° A) РїРѕ СЃС‚Р°С‚СѓСЃСѓ "РњРµСЂС‚РІС‹Р№ СЃС‚РѕРє" (РїРѕСЃР»РµРґРЅСЏСЏ РєРѕР»РѕРЅРєР°)
         for row_idx, last_out_date in enumerate(report.get("last_out_date", pd.Series(dtype="datetime64[ns]")), start=2):
             if last_out_date is None or pd.isna(last_out_date):
                 continue
@@ -554,3 +648,4 @@ def generate_combined_report(
     safe_output = output.where(pd.notna(output), None)
     rows = safe_output.to_dict(orient="records")
     return CombinedReportResult(rows=rows, file_path=file_path)
+
