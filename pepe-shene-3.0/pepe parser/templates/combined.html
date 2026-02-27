@@ -38,6 +38,17 @@
             <div class="upload-area combined-upload-area">
                 <div class="upload-text">Выберите файл для каждого источника, затем нажмите "Сформировать отчет"</div>
 
+                <div class="combined-bulk-upload">
+                    <div class="combined-bulk-title">Быстрая загрузка всех файлов</div>
+                    <div id="combinedBulkDrop" class="combined-bulk-drop">
+                        <div class="upload-text">Перетащите все файлы сюда или выберите их вручную</div>
+                        <input type="file" id="combinedBulkInput" class="file-input" accept=".xls,.xlsx" multiple>
+                        <button class="upload-button combined-file-btn" onclick="document.getElementById('combinedBulkInput').click()">Выбрать файлы</button>
+                        <div id="combinedBulkStatus" class="combined-bulk-status">Файлы не выбраны</div>
+                    </div>
+                    <div class="combined-bulk-hint">Файлы будут распределены по карточкам ниже по названию.</div>
+                </div>
+
                 <div class="combined-upload-grid">
                     <div class="combined-upload-card">
                         <strong>Основные данные (Article Master Data)</strong>

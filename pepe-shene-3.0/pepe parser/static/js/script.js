@@ -20,6 +20,9 @@ const combinedAbcInput = document.getElementById('combinedAbcInput');
 const combinedOrderPickedInput = document.getElementById('combinedOrderPickedInput');
 const combinedStockInput = document.getElementById('combinedStockInput');
 const combinedGenerateBtn = document.getElementById('combinedGenerateBtn');
+const combinedBulkInput = document.getElementById('combinedBulkInput');
+const combinedBulkDrop = document.getElementById('combinedBulkDrop');
+const combinedBulkStatus = document.getElementById('combinedBulkStatus');
 const combinedMasterName = document.getElementById('combinedMasterName');
 const combinedMovementsName = document.getElementById('combinedMovementsName');
 const combinedLinesName = document.getElementById('combinedLinesName');
@@ -182,6 +185,120 @@ function setupCombinedFileInput() {
 
     if (combinedGenerateBtn) {
         combinedGenerateBtn.addEventListener('click', processCombinedNamedFiles);
+    }
+}
+
+function setupCombinedBulkInput() {
+    if (!combinedBulkInput && !combinedBulkDrop) return;
+
+    const handleFiles = (fileList) => {
+        const files = Array.from(fileList || []);
+        if (!files.length) return;
+        assignCombinedFiles(files);
+    };
+
+    if (combinedBulkInput) {
+        combinedBulkInput.addEventListener('change', function() {
+            handleFiles(this.files);
+        });
+    }
+
+    if (combinedBulkDrop) {
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            combinedBulkDrop.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            combinedBulkDrop.addEventListener(eventName, () => {
+                combinedBulkDrop.classList.add('dragover');
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            combinedBulkDrop.addEventListener(eventName, () => {
+                combinedBulkDrop.classList.remove('dragover');
+            }, false);
+        });
+
+        combinedBulkDrop.addEventListener('drop', function(e) {
+            const dt = e.dataTransfer;
+            const files = dt ? dt.files : [];
+            handleFiles(files);
+        }, false);
+    }
+}
+
+function normalizeCombinedFileName(value) {
+    if (!value) return '';
+    return value.toLowerCase().replace(/[^0-9a-z\u0430-\u044f]+/g, '');
+}
+
+function setInputFile(inputEl, file) {
+    if (!inputEl || !file) return;
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    inputEl.files = dt.files;
+    inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+function assignCombinedFiles(files) {
+    const mapping = [
+        { key: 'master', input: combinedMasterInput, label: 'Основные данные (Article Master Data)', match: name => name.includes('articlemasterdata') || name.includes('основныеданные') },
+        { key: 'movements', input: combinedMovementsInput, label: 'Движения стока', match: name => name.includes('движениястока') },
+        { key: 'lines', input: combinedLinesInput, label: 'Линии пикинга', match: name => name.includes('линиипикинга') },
+        { key: 'abc', input: combinedAbcInput, label: 'ABC анализ', match: name => name.includes('abc') && name.includes('анализ') },
+        { key: 'order_picked', input: combinedOrderPickedInput, label: 'Проверка заказано-собрано', match: name => name.includes('проверказаказано') },
+        { key: 'stock', input: combinedStockInput, label: 'PUD отчет по стоку', match: name => name.includes('pud') || (name.includes('отч') && name.includes('стоку')) },
+    ];
+
+    const assigned = new Map();
+    const duplicates = [];
+    const unmatched = [];
+
+    files.forEach(file => {
+        const normalized = normalizeCombinedFileName(file.name || '');
+        const target = mapping.find(item => item.match(normalized));
+        if (!target) {
+            unmatched.push(file.name);
+            return;
+        }
+        if (assigned.has(target.key)) {
+            duplicates.push(file.name);
+            return;
+        }
+        assigned.set(target.key, file);
+        setInputFile(target.input, file);
+    });
+
+    const assignedLabels = mapping
+        .filter(item => assigned.has(item.key))
+        .map(item => item.label);
+
+    if (combinedBulkStatus) {
+        if (assignedLabels.length) {
+            combinedBulkStatus.textContent = `Распределено: ${assignedLabels.join(', ')}`;
+        } else {
+            combinedBulkStatus.textContent = 'Файлы не распознаны';
+        }
+    }
+
+    const missingLabels = mapping
+        .filter(item => !assigned.has(item.key))
+        .map(item => item.label);
+
+    if (unmatched.length || duplicates.length || missingLabels.length) {
+        let message = 'Проверьте файлы: ';
+        if (missingLabels.length) message += `не найдены ${missingLabels.join(', ')}`;
+        if (unmatched.length) message += `${missingLabels.length ? '; ' : ''}не распознаны ${unmatched.join(', ')}`;
+        if (duplicates.length) message += `${missingLabels.length || unmatched.length ? '; ' : ''}дубликаты ${duplicates.join(', ')}`;
+        showNotification(message, 'info');
+    } else {
+        showNotification('Файлы распределены по карточкам', 'success');
     }
 }
 
@@ -1246,6 +1363,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setupDragAndDrop();
     setupFileInput();
     setupCombinedFileInput();
+    setupCombinedBulkInput();
     
     // Инициализация вкладок
     document.querySelectorAll('.tab').forEach(tab => {
