@@ -87,6 +87,22 @@ def _parse_location(location: str) -> Tuple[Optional[str], Optional[str]]:
     return None, None
 
 
+def _is_zero_like_location(value) -> bool:
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return False
+    if isinstance(value, (int, float)):
+        return float(value) == 0.0
+    text = str(value).strip()
+    if not text:
+        return False
+    if set(text) == {"0"}:
+        return True
+    digits = re.findall(r"\d+", text)
+    if digits and all(int(d) == 0 for d in digits):
+        return True
+    return False
+
+
 def _load_master_data(path: Path) -> pd.DataFrame:
     df = _read_excel(path, sheet_name=0, header=1)
     code_col = _find_column(df.columns, ["Код артикула", "Article Code"])
@@ -549,6 +565,11 @@ def generate_combined_report(
     report["dead_stock_status"] = report["last_out_date"].apply(_dead_stock_status)
     report["dead_stock_rank"] = report["last_out_date"].apply(_dead_stock_sort_rank)
     report = report.sort_values(by=["dead_stock_rank", "article"], ascending=[True, True]).reset_index(drop=True)
+
+    # Remove rows where picking place is zero-like.
+    place_series = report.get("place")
+    if place_series is not None:
+        report = report.loc[~place_series.apply(_is_zero_like_location)].reset_index(drop=True)
 
     # output columns
     output = pd.DataFrame({
