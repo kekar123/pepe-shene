@@ -277,6 +277,73 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+def parse_pick_location(raw_value):
+    """Parse location code like E-743-0025-10 into structured parts."""
+    if raw_value is None:
+        return None
+
+    value = str(raw_value).strip().upper()
+    if not value:
+        return None
+
+    match = re.match(r'^([A-ZА-Я])-(\d{3})-(\d{4})-(\d{2})$', value)
+    if not match:
+        return None
+
+    zone, aisle, place, level = match.groups()
+    return {
+        'code': value,
+        'zone': zone,
+        'aisle': int(aisle),
+        'place': int(place),
+        'level': int(level),
+    }
+
+
+def extract_locations_from_json_file(json_file: Path):
+    try:
+        with json_file.open('r', encoding='utf-8') as f:
+            payload = json.load(f)
+    except Exception:
+        return []
+
+    if not isinstance(payload, list):
+        return []
+
+    location_keys = [
+        'МЕСТО_ОТБОРА',
+        'Место отбора',
+        'Место пикинг',
+        'place',
+        'location',
+        'Location',
+    ]
+
+    seen = set()
+    locations = []
+    for row in payload:
+        if not isinstance(row, dict):
+            continue
+
+        parsed = None
+        for key in location_keys:
+            if key in row:
+                parsed = parse_pick_location(row.get(key))
+                if parsed:
+                    break
+
+        if not parsed:
+            continue
+
+        code = parsed['code']
+        if code in seen:
+            continue
+        seen.add(code)
+        locations.append(parsed)
+
+    return locations
+
+
 
 @app.route('/')
 
@@ -289,6 +356,11 @@ def index():
 @app.route('/combined')
 def combined_page():
     return render_template('combined.html')
+
+
+@app.route('/warehouse')
+def warehouse_page():
+    return render_template('warehouse.html')
 
 
 
@@ -772,6 +844,67 @@ def download_report(filename):
         return send_from_directory(ANALYSIS_RESULTS_DIR, filename, as_attachment=True)
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 404
+
+
+@app.route('/api/warehouse-map', methods=['GET'])
+def get_warehouse_map():
+    """Return warehouse layout data extracted from the latest JSON source file."""
+    try:
+        source_dirs = [
+            OUTPUT_JSON_DIR,
+            PARENT_DIR / OUTPUT_JSON_FOLDER,
+        ]
+
+        json_files = []
+        for directory in source_dirs:
+            if directory.exists():
+                json_files.extend(directory.glob('*.json'))
+
+        json_files = sorted(
+            set(json_files),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True
+        )
+
+        if not json_files:
+            return jsonify({
+                'success': False,
+                'error': 'Файлы данных не найдены'
+            }), 404
+
+        chosen_file = None
+        locations = []
+        for candidate in json_files[:10]:
+            extracted = extract_locations_from_json_file(candidate)
+            if extracted:
+                chosen_file = candidate
+                locations = extracted
+                break
+
+        if not locations or chosen_file is None:
+            return jsonify({
+                'success': False,
+                'error': 'В данных нет валидных локаций склада'
+            }), 404
+
+        aisles = sorted({item['aisle'] for item in locations})
+        places = sorted({item['place'] for item in locations})
+        levels = sorted({item['level'] for item in locations})
+
+        return jsonify({
+            'success': True,
+            'meta': {
+                'source_file': chosen_file.name,
+                'updated_at': datetime.fromtimestamp(chosen_file.stat().st_mtime).isoformat(),
+                'locations_count': len(locations),
+                'aisles_count': len(aisles),
+                'places_count': len(places),
+                'levels_count': len(levels),
+            },
+            'locations': locations
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @app.route('/api/analysis-data', methods=['GET'])

@@ -155,7 +155,7 @@ async function loadAnalysisData() {
             renderAnalysisTable([]);
         }
     } catch (error) {
-        console.error('РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё Р°РЅР°Р»РёР·Р°:', error);
+        console.error('Ошибка загрузки анализа:', error);
         renderAnalysisTable([]);
     }
 }
@@ -180,7 +180,6 @@ function renderAnalysisTable(data) {
         const row = document.createElement('tr');
 
         const productName = item.name || item.product_name || item.productName || '';
-        const revenue = item.revenue ?? item.total_revenue ?? 0;
         const abcCategory = item.ABC || item.abc_category || item.abcCategory || '';
         const xyzCategory = item.XYZ || item.xyz_category || item.xyzCategory || '';
         const abcXyzCategory = item.ABC_XYZ || item.abc_xyz_category || item.abcXyzCategory || '';

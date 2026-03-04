@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Склад</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<header class="header">
+    <div class="header-inner">
+        <a class="penis" href="#"><h1>SKLAD</h1></a>
+        <nav class="header-links">
+            <a href="{{ url_for('index') }}">Поставка</a>
+            <a href="{{ url_for('remove_page') }}">Отгрузка</a>
+            <a href="{{ url_for('warehouse_page') }}" style="background-color: #3d4170; border-radius: 15px; padding: 10px 15px;">Склад</a>
+            <a href="#">Этикетки</a>
+            <a href="{{ url_for('combined_page') }}">Общий отчет</a>
+        </nav>
+    </div>
+</header>
+
+<div id="notification" class="notification">
+    <span id="notification-text"></span>
+    <button class="close-notification" onclick="hideNotification()" aria-label="Закрыть">&times;</button>
+    <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill"></div>
+    </div>
+</div>
+
+<main class="page-container warehouse-page-container">
+    <div class="container">
+        <div class="upload-section warehouse-upload-section">
+            <div class="upload-title">Схема склада</div>
+            <div class="warehouse-map-box">
+                <div class="warehouse-legend">
+                    <div class="warehouse-legend-item">
+                        <span class="warehouse-legend-swatch warehouse-legend-swatch-cell"></span>
+                        <span>Ячейка пикинга</span>
+                    </div>
+                    <div class="warehouse-legend-item">
+                        <span class="warehouse-legend-swatch warehouse-legend-swatch-passage"></span>
+                        <span>Проход (21-24)</span>
+                    </div>
+                </div>
+                <div id="warehouseMapGrid" class="warehouse-map-grid"></div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer class="footer">
+    <div class="footer-inner">
+        ©2025 SKLAD | Проект Ногинского колледжа
+    </div>
+</footer>
+
+<script src="{{ url_for('static', filename='js/warehouse.js') }}"></script>
+</body>
+</html>
