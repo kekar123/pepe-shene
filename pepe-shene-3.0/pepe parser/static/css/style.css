@@ -2007,6 +2007,19 @@ button:active,
     padding: 16px;
 }
 
+.warehouse-report-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.warehouse-report-file-name {
+    font-size: 13px;
+    color: #5a6d88;
+}
+
 .warehouse-legend {
     display: flex;
     gap: 14px;
@@ -2039,14 +2052,29 @@ button:active,
 }
 
 .warehouse-legend-swatch-passage {
-    background: #fff3cd;
-    border-color: #d89b00;
+    background: repeating-linear-gradient(
+        135deg,
+        #e6eefb,
+        #e6eefb 6px,
+        #d7e3f8 6px,
+        #d7e3f8 12px
+    );
+    border-color: #5e7fb3;
 }
 
-.warehouse-legend-swatch-offset {
-    background: transparent;
-    border-color: #d0d9e6;
-    border-style: dashed;
+.warehouse-legend-swatch-stock-red {
+    background: #ffe5e5;
+    border-color: #d9534f;
+}
+
+.warehouse-legend-swatch-stock-yellow {
+    background: #fff8d9;
+    border-color: #d4b047;
+}
+
+.warehouse-legend-swatch-stock-green {
+    background: #e8f7ed;
+    border-color: #4f9b69;
 }
 
 .warehouse-map-header {
@@ -2160,9 +2188,33 @@ button:active,
 }
 
 .warehouse-place-cell-passage {
-    background: #fff3cd;
-    border-color: #d89b00;
-    color: #7a4a00;
+    background: repeating-linear-gradient(
+        135deg,
+        #e6eefb,
+        #e6eefb 6px,
+        #d7e3f8 6px,
+        #d7e3f8 12px
+    );
+    border-color: #5e7fb3;
+    color: #1f3f72;
+}
+
+.warehouse-place-cell-stock-red {
+    background: #ffe5e5;
+    border-color: #d9534f;
+    color: #7f1d1d;
+}
+
+.warehouse-place-cell-stock-yellow {
+    background: #fff8d9;
+    border-color: #d4b047;
+    color: #7a5a00;
+}
+
+.warehouse-place-cell-stock-green {
+    background: #e8f7ed;
+    border-color: #4f9b69;
+    color: #1f5d34;
 }
 
 .warehouse-place-cell-offset {

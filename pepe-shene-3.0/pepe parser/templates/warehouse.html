@@ -12,10 +12,7 @@
     <div class="header-inner">
         <a class="penis" href="#"><h1>SKLAD</h1></a>
         <nav class="header-links">
-            <a href="{{ url_for('index') }}">Поставка</a>
-            <a href="{{ url_for('remove_page') }}">Отгрузка</a>
             <a href="{{ url_for('warehouse_page') }}" style="background-color: #3d4170; border-radius: 15px; padding: 10px 15px;">Склад</a>
-            <a href="#">Этикетки</a>
             <a href="{{ url_for('combined_page') }}">Общий отчет</a>
         </nav>
     </div>
@@ -34,6 +31,12 @@
         <div class="upload-section warehouse-upload-section">
             <div class="upload-title">Схема склада</div>
             <div class="warehouse-map-box">
+                <div class="warehouse-report-controls">
+                    <input type="file" id="warehouseReportInput" class="file-input" accept=".xls,.xlsx">
+                    <button id="warehouseReportChooseBtn" class="upload-button" type="button">Выбрать отчет</button>
+                    <button id="warehouseReportApplyBtn" class="upload-button" type="button">Построить схему</button>
+                    <span id="warehouseReportFileName" class="warehouse-report-file-name">Файл не выбран</span>
+                </div>
                 <div class="warehouse-legend">
                     <div class="warehouse-legend-item">
                         <span class="warehouse-legend-swatch warehouse-legend-swatch-cell"></span>
@@ -43,7 +46,20 @@
                         <span class="warehouse-legend-swatch warehouse-legend-swatch-passage"></span>
                         <span>Проход (21-24)</span>
                     </div>
+                    <div class="warehouse-legend-item">
+                        <span class="warehouse-legend-swatch warehouse-legend-swatch-stock-red"></span>
+                        <span>Сток: красный</span>
+                    </div>
+                    <div class="warehouse-legend-item">
+                        <span class="warehouse-legend-swatch warehouse-legend-swatch-stock-yellow"></span>
+                        <span>Сток: желтый</span>
+                    </div>
+                    <div class="warehouse-legend-item">
+                        <span class="warehouse-legend-swatch warehouse-legend-swatch-stock-green"></span>
+                        <span>Сток: зеленый</span>
+                    </div>
                 </div>
+                <div id="warehouseMapMeta" class="warehouse-map-meta"></div>
                 <div id="warehouseMapGrid" class="warehouse-map-grid"></div>
             </div>
         </div>

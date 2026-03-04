@@ -344,6 +344,84 @@ def extract_locations_from_json_file(json_file: Path):
     return locations
 
 
+def parse_int_value(raw_value):
+    if raw_value is None:
+        return None
+    try:
+        if isinstance(raw_value, float) and math.isnan(raw_value):
+            return None
+    except Exception:
+        pass
+
+    text = str(raw_value).strip()
+    if not text:
+        return None
+
+    match = re.search(r'\d+', text)
+    if not match:
+        return None
+    try:
+        return int(match.group(0))
+    except Exception:
+        return None
+
+
+def parse_aisle_from_value(raw_value):
+    if raw_value is None:
+        return None
+    text = str(raw_value).strip().upper()
+    if not text:
+        return None
+
+    code_match = re.search(r'[A-ZА-Я]-(\d{3})-(\d{4})-(\d{2})', text)
+    if code_match:
+        return int(code_match.group(1))
+    return parse_int_value(text)
+
+
+def parse_place_from_value(raw_value):
+    if raw_value is None:
+        return None
+    text = str(raw_value).strip().upper()
+    if not text:
+        return None
+
+    code_match = re.search(r'[A-ZА-Я]-(\d{3})-(\d{4})-(\d{2})', text)
+    if code_match:
+        return int(code_match.group(2))
+    return parse_int_value(text)
+
+
+def normalize_stock_color(raw_value):
+    if raw_value is None:
+        return None
+    value = str(raw_value).strip().lower()
+    if not value:
+        return None
+    if 'крас' in value or value == 'red':
+        return 'red'
+    if 'желт' in value or 'жёлт' in value or value == 'yellow':
+        return 'yellow'
+    if 'зелен' in value or 'зелён' in value or value == 'green':
+        return 'green'
+    return None
+
+
+def find_dataframe_column(columns, candidates):
+    normalized = {str(col).strip().lower(): col for col in columns}
+    for candidate in candidates:
+        key = candidate.strip().lower()
+        if key in normalized:
+            return normalized[key]
+
+    for col in columns:
+        current = str(col).strip().lower()
+        for candidate in candidates:
+            if candidate.strip().lower() in current:
+                return col
+    return None
+
+
 
 @app.route('/')
 
@@ -902,6 +980,152 @@ def get_warehouse_map():
                 'levels_count': len(levels),
             },
             'locations': locations
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/warehouse-stock-colors', methods=['GET'])
+def get_warehouse_stock_colors():
+    """Return stock colors by aisle/place from the latest combined report."""
+    try:
+        report_files = sorted(
+            ANALYSIS_RESULTS_DIR.glob('combined_report_*.xlsx'),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True
+        )
+
+        if not report_files:
+            return jsonify({'success': False, 'error': 'Файл общего отчета не найден'}), 404
+
+        latest_file = report_files[0]
+        df = pd.read_excel(latest_file, sheet_name=0)
+
+        if df is None or df.empty:
+            return jsonify({'success': False, 'error': 'Последний общий отчет пустой'}), 404
+
+        aisle_col = 'Аллея пикинг'
+        place_col = 'Место пикинг'
+        stock_col = 'Мертвый сток'
+
+        if aisle_col not in df.columns or place_col not in df.columns or stock_col not in df.columns:
+            return jsonify({
+                'success': False,
+                'error': 'В отчете отсутствуют нужные колонки для схемы'
+            }), 400
+
+        color_rank = {'green': 1, 'yellow': 2, 'red': 3}
+        colors = {}
+
+        for _, row in df.iterrows():
+            aisle = parse_aisle_from_value(row.get(aisle_col))
+            place = parse_place_from_value(row.get(place_col))
+            color = normalize_stock_color(row.get(stock_col))
+
+            if aisle is None or place is None or color is None:
+                continue
+            if aisle < 742 or aisle > 748:
+                continue
+            if place < 1 or place > 63:
+                continue
+
+            key = f'{aisle}-{place}'
+            existing = colors.get(key)
+            if existing is None or color_rank[color] > color_rank.get(existing, 0):
+                colors[key] = color
+
+        return jsonify({
+            'success': True,
+            'report_file': latest_file.name,
+            'updated_at': datetime.fromtimestamp(latest_file.stat().st_mtime).isoformat(),
+            'colors': colors
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/warehouse-layout-from-report', methods=['POST'])
+def warehouse_layout_from_report():
+    """Build warehouse aisle/place layout and stock colors from uploaded combined report."""
+    try:
+        if 'report_file' not in request.files:
+            return jsonify({'success': False, 'error': 'Файл отчета не найден в запросе'}), 400
+
+        report_file = request.files['report_file']
+        if not report_file or not report_file.filename:
+            return jsonify({'success': False, 'error': 'Файл отчета не выбран'}), 400
+
+        if not allowed_file(report_file.filename):
+            return jsonify({'success': False, 'error': 'Разрешены только файлы Excel (.xls, .xlsx)'}), 400
+
+        temp_name = f"warehouse_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{secure_filename(report_file.filename)}"
+        temp_path = UPLOAD_DIR / temp_name
+        report_file.save(str(temp_path))
+
+        try:
+            df = pd.read_excel(temp_path, sheet_name=0)
+        finally:
+            try:
+                temp_path.unlink(missing_ok=True)
+            except Exception:
+                pass
+
+        if df is None or df.empty:
+            return jsonify({'success': False, 'error': 'Загруженный отчет пустой'}), 400
+
+        aisle_col = find_dataframe_column(df.columns, ['Аллея пикинг', 'Аллея', 'aisle'])
+        place_col = find_dataframe_column(df.columns, ['Место пикинг', 'Место', 'place'])
+        stock_col = find_dataframe_column(df.columns, ['Мертвый сток', 'Мёртвый сток', 'dead stock'])
+
+        if aisle_col is None or place_col is None:
+            return jsonify({
+                'success': False,
+                'error': 'В отчете нет колонок аллеи/места пикинга'
+            }), 400
+
+        colors = {}
+        by_aisle_places = {}
+
+        for _, row in df.iterrows():
+            aisle = parse_aisle_from_value(row.get(aisle_col))
+            place = parse_place_from_value(row.get(place_col))
+            if aisle is None or place is None:
+                continue
+            if place < 1:
+                continue
+
+            if aisle not in by_aisle_places:
+                by_aisle_places[aisle] = set()
+            by_aisle_places[aisle].add(place)
+
+            if stock_col is None:
+                continue
+
+            color = normalize_stock_color(row.get(stock_col))
+            if color is None:
+                continue
+
+            key = f'{aisle}-{place}'
+            if key not in colors:
+                colors[key] = color
+
+        if not by_aisle_places:
+            return jsonify({'success': False, 'error': 'В отчете не найдено валидных ячеек пикинга'}), 400
+
+        aisles = sorted(by_aisle_places.keys(), reverse=True)
+        layout = []
+        global_max_place = 1
+        for aisle in aisles:
+            max_place = max(by_aisle_places[aisle]) if by_aisle_places[aisle] else 1
+            layout.append({'aisle': int(aisle), 'max_place': int(max_place)})
+            if max_place > global_max_place:
+                global_max_place = max_place
+
+        return jsonify({
+            'success': True,
+            'layout': layout,
+            'global_max_place': int(global_max_place),
+            'colors': colors
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
