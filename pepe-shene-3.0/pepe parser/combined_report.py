@@ -1,10 +1,11 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import pandas as pd
 
@@ -228,14 +229,14 @@ def _load_stock_movements(path: Path) -> pd.DataFrame:
     df["reason"] = df[reason_col].astype(str).str.lower()
     df = df.dropna(subset=["article"])
 
-    filtered = df[df["reason"].apply(_is_reappro_reason)]
+    filtered = df[df["reason"].apply(_is_reappro_reason)].copy()
     if filtered.empty:
         return pd.DataFrame(columns=["article", "reappro_pallets", "reappro_boxes", "reappro_units"])
 
     if pallets_col and pallets_col in filtered.columns:
         pallet_series = filtered[pallets_col]
     else:
-        pallet_series = pd.Series([None] * len(filtered))
+        pallet_series = pd.Series([None] * len(filtered), index=filtered.index)
 
     filtered["reappro_pallets"] = pallet_series
     filtered["reappro_boxes"] = pd.to_numeric(filtered[boxes_col], errors="coerce").fillna(0) if boxes_col else 0
@@ -281,9 +282,9 @@ def _load_picking_lines(path: Path) -> pd.DataFrame:
 
     if support_type_col and support_type_col in df.columns:
         df["support_type"] = df[support_type_col].astype(str).str.lower()
-        df_pick = df[df["support_type"].str.contains("пик", na=False)]
+        df_pick = df[df["support_type"].str.contains("пик", na=False)].copy()
     else:
-        df_pick = df
+        df_pick = df.copy()
 
     df_pick["picked_boxes"] = pd.to_numeric(df_pick[picked_boxes_col], errors="coerce").fillna(0) if picked_boxes_col else 0
     df_pick["picked_units"] = pd.to_numeric(df_pick[picked_units_col], errors="coerce").fillna(0) if picked_units_col else 0
@@ -507,6 +508,128 @@ def _dead_stock_sort_rank(last_out_date: Optional[pd.Timestamp]) -> int:
     return 0
 
 
+def _safe_str(value: Any) -> str:
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return ""
+    return str(value).strip()
+
+
+def _safe_num(value: Any) -> float:
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return 0.0
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _build_ai_summary(master: pd.DataFrame, output: pd.DataFrame) -> Dict[str, Any]:
+    """Формирует структуру для скрытого JSON отчёта (для последующего использования нейросетью)."""
+    count_master = len(master) if master is not None and not master.empty else 0
+    count_picking = len(output) if output is not None and not output.empty else 0
+
+    abc_freq: Dict[str, int] = {}
+    abc_weight: Dict[str, int] = {}
+    if output is not None and not output.empty:
+        if "ABC класс" in output.columns:
+            for k, v in output["ABC класс"].value_counts().items():
+                key = _safe_str(k)
+                if key:
+                    abc_freq[key] = int(v)
+        if "ABC класс (вес)" in output.columns:
+            for k, v in output["ABC класс (вес)"].value_counts().items():
+                key = _safe_str(k)
+                if key:
+                    abc_weight[key] = int(v)
+
+    def top10(sort_col: str, descending: bool = True) -> List[Dict[str, Any]]:
+        if output is None or output.empty or sort_col not in output.columns:
+            return []
+        df = output.copy()
+        df["_val"] = df[sort_col].apply(_safe_num)
+        df = df[df["_val"] > 0].sort_values("_val", ascending=not descending).head(10)
+        return [
+            {
+                "артикул": _safe_str(row.get("АРТИКУЛ")),
+                "название": _safe_str(row.get("НАЗВАНИЕ")),
+                "значение": _safe_num(row.get(sort_col)),
+            }
+            for _, row in df.iterrows()
+        ]
+
+    top10_orders = top10("Кол-во заказов")
+    top10_picked_units = top10("Выход в штуках")
+    top10_lines = top10("Кол-во линий")
+    top10_reappro = top10("Кол-во коробов реапро")
+
+    # Топ-10 худших: только строки с данными (есть хотя бы заказы, выход или линии), сортировка по возрастанию
+    top10_worst: List[Dict[str, Any]] = []
+    if output is not None and not output.empty:
+        orders_col = output.get("Кол-во заказов", pd.Series(dtype=float))
+        units_col = output.get("Выход в штуках", pd.Series(dtype=float))
+        lines_col = output.get("Кол-во линий", pd.Series(dtype=float))
+        if orders_col is None:
+            orders_col = pd.Series(0.0, index=output.index)
+        if units_col is None:
+            units_col = pd.Series(0.0, index=output.index)
+        if lines_col is None:
+            lines_col = pd.Series(0.0, index=output.index)
+        has_data = (orders_col.fillna(0) > 0) | (units_col.fillna(0) > 0) | (lines_col.fillna(0) > 0)
+        with_data = output.loc[has_data].copy()
+        with_data["_score"] = (
+            with_data["Кол-во заказов"].fillna(0) + with_data["Выход в штуках"].fillna(0) * 0.001 + with_data["Кол-во линий"].fillna(0)
+        )
+        with_data = with_data.sort_values("_score", ascending=True).head(10)
+        for _, row in with_data.iterrows():
+            top10_worst.append({
+                "артикул": _safe_str(row.get("АРТИКУЛ")),
+                "название": _safe_str(row.get("НАЗВАНИЕ")),
+                "кол_во_заказов": _safe_num(row.get("Кол-во заказов")),
+                "выход_в_штуках": _safe_num(row.get("Выход в штуках")),
+                "кол_во_линий": _safe_num(row.get("Кол-во линий")),
+            })
+
+    # Топ-10 залежавшихся: по дате последнего выхода (старые первые), с количеством дней
+    top10_stagnant: List[Dict[str, Any]] = []
+    if output is not None and not output.empty and "Дата последнего выхода" in output.columns:
+        today = datetime.now().date()
+        rows_with_date = []
+        for _, row in output.iterrows():
+            raw = row.get("Дата последнего выхода")
+            if raw is None or (isinstance(raw, float) and pd.isna(raw)):
+                continue
+            if isinstance(raw, pd.Timestamp):
+                dt = raw.date()
+            else:
+                try:
+                    dt = datetime.strptime(str(raw).strip()[:10], "%Y-%m-%d").date()
+                except (ValueError, TypeError):
+                    continue
+            days_lying = (today - dt).days
+            rows_with_date.append((days_lying, dt, row))
+        rows_with_date.sort(key=lambda x: -x[0])
+        for days_lying, dt, row in rows_with_date[:10]:
+            top10_stagnant.append({
+                "артикул": _safe_str(row.get("АРТИКУЛ")),
+                "название": _safe_str(row.get("НАЗВАНИЕ")),
+                "дата_последнего_выхода": dt.strftime("%Y-%m-%d"),
+                "дней_лежит": days_lying,
+            })
+
+    return {
+        "количество_артикулов_мастер": count_master,
+        "количество_товаров_в_пикинге": count_picking,
+        "abc_по_частоте": abc_freq,
+        "abc_по_весу": abc_weight,
+        "топ10_по_заказам": top10_orders,
+        "топ10_по_выходу_в_штуках": top10_picked_units,
+        "топ10_по_количеству_линий": top10_lines,
+        "топ10_по_коробам_реапро": top10_reappro,
+        "топ10_худших": top10_worst,
+        "топ10_залежавшихся": top10_stagnant,
+    }
+
+
 @dataclass
 class CombinedReportResult:
     rows: List[Dict]
@@ -556,8 +679,9 @@ def generate_combined_report(
     abc_classes = _compute_abc_classes_by_frequency(picking_lines)
     report = report.merge(abc_classes, on="article", how="left")
 
-    reappro_pop = _compute_popularity(report.fillna(0), "reappro_boxes", "percent_reappro", "popularity_reappro")
-    lines_pop = _compute_popularity(report.fillna(0), "lines_count", "percent_lines", "popularity_lines")
+    report_filled = report.fillna(0).infer_objects(copy=False)
+    reappro_pop = _compute_popularity(report_filled, "reappro_boxes", "percent_reappro", "popularity_reappro")
+    lines_pop = _compute_popularity(report_filled, "lines_count", "percent_lines", "popularity_lines")
 
     report = report.merge(reappro_pop, on="article", how="left")
     report = report.merge(lines_pop, on="article", how="left")
@@ -610,6 +734,14 @@ def generate_combined_report(
     output_dir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     file_path = output_dir / f"combined_report_{timestamp}.xlsx"
+    json_path = output_dir / f"combined_report_{timestamp}.json"
+    try:
+        ai_summary = _build_ai_summary(master, output)
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(ai_summary, f, ensure_ascii=False, indent=2, default=str)
+    except Exception:
+        pass
+
     with pd.ExcelWriter(file_path) as writer:
         output.to_excel(writer, index=False, sheet_name="Отчет")
         worksheet = writer.sheets["Отчет"]

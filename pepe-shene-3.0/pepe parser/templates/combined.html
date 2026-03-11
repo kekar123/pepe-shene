@@ -1,9 +1,12 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Общий отчет</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
@@ -11,7 +14,7 @@
 <!-- HEADER -->
 <header class="header">
     <div class="header-inner">
-        <a class="penis" href="#"><h1>SKLAD</h1></a>
+        <a class="heading" href="#"><h1>FM Assistant - Работа с отчётами</h1></a>
         <nav class="header-links">
             <a href="{{ url_for('warehouse_page') }}">Склад</a>
             <a href="{{ url_for('combined_page') }}" style="background-color: #3d4170; border-radius: 15px; padding: 10px 15px;">Общий отчет</a>
@@ -96,6 +99,14 @@
                         Скачать общий отчет
                     </a>
                 </div>
+
+                <div id="combinedAiSimulation" class="ai-simulation" aria-live="polite">
+                    <div class="ai-simulation-header">
+                        <span class="ai-simulation-dot"></span>
+                        <span class="ai-simulation-title">FM Assistant</span>
+                    </div>
+                    <div id="combinedAiSimulationLog" class="ai-simulation-log"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -152,10 +163,14 @@
         </div>
 
         <div id="combinedChartsContainer" style="display: none;">
+            <div id="combinedChartsSummary" class="combined-charts-summary"></div>
             <div class="charts-row">
                 <div class="chart-card">
                     <div class="chart-header">
-                        <h3>ABC Анализ общего отчета</h3>
+                        <h3>ABC Анализ общего отчета <span class="chart-help" aria-label="Подсказка" data-chart-help="abc-frequency">&#9432;</span></h3>
+                        <div class="chart-tooltip" id="tooltip-abc-frequency" role="tooltip">
+                            Категории считаются по <strong>среднему интервалу между отборами</strong> товара (данные линий пикинга): <strong>A</strong> — интервал ≤14 дней (часто отбирают), <strong>B</strong> — 15–30 дней, <strong>C</strong> — более 30 дней. Методика согласована с логистикой склада.
+                        </div>
                         <div class="chart-description">
                             Распределение товаров по ABC категориям в общем отчете.
                         </div>
@@ -166,7 +181,10 @@
                 </div>
                 <div class="chart-card">
                     <div class="chart-header">
-                        <h3>ABC Категории по весу</h3>
+                        <h3>ABC Категории по весу <span class="chart-help" aria-label="Подсказка" data-chart-help="abc-weight">&#9432;</span></h3>
+                        <div class="chart-tooltip" id="tooltip-abc-weight" role="tooltip">
+                            Категории по <strong>весу единицы товара (кг)</strong>: <strong>A</strong> — 5,1–20 кг, <strong>B</strong> — 1,6–5 кг, <strong>C</strong> — 0,1–1,5 кг. Товары с весом вне этих диапазонов или с неуказанным весом отнесены к «без категории».
+                        </div>
                         <div class="chart-description">
                             Распределение товаров по весовым категориям A, B, C.
                         </div>
@@ -176,12 +194,67 @@
                     </div>
                 </div>
             </div>
+
+            <div class="combined-tops-row">
+                <div class="chart-card combined-top-card">
+                    <div class="chart-header">
+                        <h3>ТОП-10 по количеству заказов</h3>
+                    </div>
+                    <div class="chart-content combined-top-content">
+                        <table class="combined-top-table">
+                            <thead><tr><th>№</th><th>Товар</th><th>Заказов</th></tr></thead>
+                            <tbody id="combinedTopOrdersBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="chart-card combined-top-card">
+                    <div class="chart-header">
+                        <h3>ТОП-10 по выходу в штуках</h3>
+                    </div>
+                    <div class="chart-content combined-top-content">
+                        <table class="combined-top-table">
+                            <thead><tr><th>№</th><th>Товар</th><th>Штук</th></tr></thead>
+                            <tbody id="combinedTopPickedUnitsBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="combined-tops-row">
+                <div class="chart-card combined-top-card">
+                    <div class="chart-header">
+                        <h3>ТОП-10 по количеству линий</h3>
+                    </div>
+                    <div class="chart-content combined-top-content">
+                        <table class="combined-top-table">
+                            <thead><tr><th>№</th><th>Товар</th><th>Линий</th></tr></thead>
+                            <tbody id="combinedTopLinesBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="chart-card combined-top-card">
+                    <div class="chart-header">
+                        <h3>ТОП-10 по кол-ву коробов реапро</h3>
+                    </div>
+                    <div class="chart-content combined-top-content">
+                        <table class="combined-top-table">
+                            <thead><tr><th>№</th><th>Товар</th><th>Коробов</th></tr></thead>
+                            <tbody id="combinedTopReapproBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div id="combinedNoChartsMessage" style="text-align: center; padding: 24px 20px; color: #7f8c8d; background: #f8f9fa; border-radius: 12px; margin: 12px 0;">
             <h3>Графики не загружены</h3>
             <p>Сформируйте общий отчет для построения графиков.</p>
         </div>
+    </main>
+</section>
+
+<section class="combined-clear-section">
+    <main class="result-container">
+        <button type="button" id="combinedClearDataBtn" class="upload-button combined-clear-btn">Очистить данные</button>
     </main>
 </section>
 
@@ -200,6 +273,7 @@
         <div class="modal-body">
             <img id="modalImage" src="" alt="Полноэкранный график" class="modal-image">
             <div class="modal-description" id="modalDescription"></div>
+            <div id="modalTableContainer" class="modal-table-container" style="display: none;"></div>
         </div>
     </div>
 </div>

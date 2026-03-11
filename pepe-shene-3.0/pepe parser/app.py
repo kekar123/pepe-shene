@@ -1,9 +1,12 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 import sys
+import traceback
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
 
 import os
+import threading
+import uuid
 
 import json
 
@@ -804,9 +807,84 @@ def upload_file():
 
 
 
+def _sanitize_combined_value(value):
+    if value is None:
+        return None
+    if isinstance(value, float) and math.isnan(value):
+        return None
+    if isinstance(value, dict):
+        return {k: _sanitize_combined_value(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_sanitize_combined_value(v) for v in value]
+    return value
+
+
+# Фоновая генерация общего отчёта: статус храним в файлах, чтобы работало при нескольких воркерах/релоаде
+COMBINED_JOBS_DIR = ANALYSIS_RESULTS_DIR / "combined_jobs"
+
+
+def _combined_job_path(job_id):
+    safe_id = re.sub(r"[^a-zA-Z0-9\-]", "", job_id)
+    if not safe_id:
+        safe_id = "unknown"
+    return COMBINED_JOBS_DIR / f"{safe_id}.json"
+
+
+def _read_combined_job(job_id):
+    path = _combined_job_path(job_id)
+    if not path.exists():
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def _write_combined_job(job_id, data):
+    COMBINED_JOBS_DIR.mkdir(parents=True, exist_ok=True)
+    path = _combined_job_path(job_id)
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=None)
+    except Exception:
+        pass
+
+
+def _run_combined_report_job(job_id, file_map):
+    print(f"[Combined report] Job {job_id} started.", flush=True)
+    try:
+        result = generate_combined_report(
+            master_file=Path(file_map['master']),
+            stock_report_file=Path(file_map['stock']),
+            order_picked_file=Path(file_map['order_picked']),
+            stock_movements_file=Path(file_map['movements']),
+            picking_lines_file=Path(file_map['lines']),
+            abc_analysis_file=Path(file_map['abc']),
+            output_dir=ANALYSIS_RESULTS_DIR
+        )
+        _write_combined_job(job_id, {
+            'status': 'ready',
+            'report_file': result.file_path.name,
+            'rows': _sanitize_combined_value(result.rows)
+        })
+        print(f"[Combined report] Job {job_id} finished successfully.", flush=True)
+    except Exception as e:
+        err_msg = str(e)
+        traceback.print_exc()
+        print(f"[Combined report] Job {job_id} ERROR: {err_msg}", flush=True)
+        try:
+            _write_combined_job(job_id, {
+                'status': 'error',
+                'error': err_msg
+            })
+        except Exception as write_err:
+            print(f"[Combined report] Failed to write job error state: {write_err}", flush=True)
+
+
 @app.route('/upload-combined', methods=['POST'])
 def upload_combined():
-    """Загрузка Excel файлов и формирование общего отчета."""
+    """Загрузка Excel файлов, запуск формирования отчёта в фоне, немедленный ответ с job_id."""
     try:
         def save_uploaded(file_obj):
             filename = secure_filename(file_obj.filename)
@@ -885,34 +963,31 @@ def upload_combined():
                 'missing': missing
             }), 400
 
-        result = generate_combined_report(
-            master_file=Path(file_map['master']),
-            stock_report_file=Path(file_map['stock']),
-            order_picked_file=Path(file_map['order_picked']),
-            stock_movements_file=Path(file_map['movements']),
-            picking_lines_file=Path(file_map['lines']),
-            abc_analysis_file=Path(file_map['abc']),
-            output_dir=ANALYSIS_RESULTS_DIR
-        )
+        job_id = str(uuid.uuid4())
+        _write_combined_job(job_id, {'status': 'processing'})
 
-        def sanitize(value):
-            if value is None:
-                return None
-            if isinstance(value, float) and math.isnan(value):
-                return None
-            if isinstance(value, dict):
-                return {k: sanitize(v) for k, v in value.items()}
-            if isinstance(value, (list, tuple)):
-                return [sanitize(v) for v in value]
-            return value
+        thread = threading.Thread(
+            target=_run_combined_report_job,
+            args=(job_id, file_map),
+            daemon=True
+        )
+        thread.start()
 
         return jsonify({
             'success': True,
-            'report_file': result.file_path.name,
-            'rows': sanitize(result.rows)
+            'job_id': job_id
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/upload-combined-status/<job_id>')
+def upload_combined_status(job_id):
+    """Статус фоновой генерации общего отчёта: processing | ready | error."""
+    data = _read_combined_job(job_id)
+    if not data:
+        return jsonify({'status': 'processing'})
+    return jsonify(data)
 
 
 @app.route('/download-report/<path:filename>')
@@ -1659,5 +1734,5 @@ def delete_by_file():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=8002, debug=True)
 

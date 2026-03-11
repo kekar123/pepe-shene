@@ -1,4 +1,4 @@
-﻿// Основные функции для работы с файлами
+// Основные функции для работы с файлами
 const API_BASE_URL = (() => {
     const origin = window.location.origin;
     if (origin && origin !== 'null') return origin;
@@ -31,6 +31,8 @@ const combinedOrderPickedName = document.getElementById('combinedOrderPickedName
 const combinedStockName = document.getElementById('combinedStockName');
 const combinedTableBody = document.getElementById('combinedTableBody');
 const combinedReportDownload = document.getElementById('combinedReportDownload');
+const combinedAiSimulation = document.getElementById('combinedAiSimulation');
+const combinedAiSimulationLog = document.getElementById('combinedAiSimulationLog');
 const DISABLE_DB_NOTIFICATIONS = window.DISABLE_DB_NOTIFICATIONS === true;
 const dynamicAnalysisInfo = document.getElementById('dynamicAnalysisInfo');
 const analysisStats = document.getElementById('analysisStats');
@@ -449,40 +451,181 @@ function processCombinedNamedFiles() {
         formData.append(item.key, file);
     }
 
-    showNotification('Формирование общего отчета...', 'info', { autoHide: false });
     updateProgress(30);
     uploadCombinedFiles(formData);
 }
 
+const combinedAiStepMessages = [
+    'Подключение к модели FM Assistant...',
+    'Загрузка файлов...',
+    'Подбор алгоритма анализа...',
+    'Проведение ABC-XYZ анализа...',
+    'Составление графиков и рекомендаций...',
+    'Формирование итогового отчета...'
+];
+
+const POLL_INTERVAL_MS = 1200;
+const AI_STEP_BASE_MS = 900 * 1.4;
+const COMBINED_REPORT_CACHE_KEY = 'combined_report_cache';
+let combinedPollTimer = null;
+let combinedAiStepTimer = null;
+
+function getNextAiStepDelayMs(stepIndex) {
+    let base = AI_STEP_BASE_MS;
+    if (stepIndex >= 4) base *= 1.25;
+    const r = 0.85 + Math.random() * 0.3;
+    return Math.round(base * r);
+}
+
+function stopCombinedTimers() {
+    if (combinedPollTimer) {
+        clearTimeout(combinedPollTimer);
+        combinedPollTimer = null;
+    }
+    if (combinedAiStepTimer) {
+        clearTimeout(combinedAiStepTimer);
+        combinedAiStepTimer = null;
+    }
+}
+
+function saveCombinedReportCache(reportFile, rows) {
+    try {
+        sessionStorage.setItem(COMBINED_REPORT_CACHE_KEY, JSON.stringify({ report_file: reportFile, rows: rows || [] }));
+    } catch (e) {
+        console.warn('Не удалось сохранить отчёт в сессию:', e);
+    }
+}
+
+function loadCombinedReportFromCache() {
+    if (!combinedReportDownload || !combinedTableBody) return;
+    try {
+        const raw = sessionStorage.getItem(COMBINED_REPORT_CACHE_KEY);
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        const rows = data.rows;
+        if (!Array.isArray(rows)) return;
+        displayCombinedReport(rows);
+        if (data.report_file) {
+            combinedReportDownload.href = `${API_BASE_URL}/download-report/${encodeURIComponent(data.report_file)}`;
+            combinedReportDownload.style.display = 'inline-block';
+        }
+    } catch (e) {
+        console.warn('Не удалось загрузить отчёт из сессии:', e);
+        sessionStorage.removeItem(COMBINED_REPORT_CACHE_KEY);
+    }
+}
+
+function clearCombinedReportData() {
+    try {
+        sessionStorage.removeItem(COMBINED_REPORT_CACHE_KEY);
+    } catch (e) {}
+    if (combinedTableBody) {
+        combinedTableBody.innerHTML = '<tr><td colspan="24" style="text-align: center; padding: 40px;">Нет данных. Сформируйте общий отчёт.</td></tr>';
+    }
+    if (combinedReportDownload) {
+        combinedReportDownload.removeAttribute('href');
+        combinedReportDownload.style.display = 'none';
+    }
+    renderCombinedCharts([]);
+    const summaryEl = document.getElementById('combinedChartsSummary');
+    if (summaryEl) summaryEl.innerHTML = '';
+    if (combinedAiSimulation) combinedAiSimulation.classList.remove('ai-simulation--error', 'ai-simulation--done');
+    if (combinedAiSimulationLog) combinedAiSimulationLog.innerHTML = '';
+}
+
 async function uploadCombinedFiles(formData) {
+    clearCombinedReportData();
+    setCombinedAiLog(['Подключение к модели FM Assistant...']);
+    if (combinedAiSimulation) {
+        combinedAiSimulation.classList.remove('ai-simulation--error', 'ai-simulation--done');
+    }
+    stopCombinedTimers();
+
+    let result = null;
+    let errorMessage = null;
+
     try {
         updateProgress(50);
         const response = await fetch(`${API_BASE_URL}/upload-combined`, {
             method: 'POST',
             body: formData
         });
-        updateProgress(80);
-        const result = await response.json();
+        updateProgress(70);
+        result = await response.json();
 
-        if (response.ok && result.success) {
-            updateProgress(100);
-            hideNotification();
-            showNotification('Общий отчет сформирован', 'success');
-            displayCombinedReport(result.rows || []);
-            if (combinedReportDownload && result.report_file) {
-                combinedReportDownload.href = `${API_BASE_URL}/download-report/${encodeURIComponent(result.report_file)}`;
-                combinedReportDownload.style.display = 'inline-block';
-            }
-        } else {
-            const message = result.error || 'Ошибка при формировании отчета';
-            showNotification(message, 'error');
-            updateProgress(0);
+        if (!response.ok || !result.success) {
+            errorMessage = (result && result.error) || 'Ошибка при формировании отчета';
         }
     } catch (error) {
         console.error('Ошибка загрузки файлов:', error);
-        showNotification('Ошибка соединения с сервером', 'error');
-        updateProgress(0);
+        errorMessage = 'Ошибка соединения с сервером';
     }
+
+    if (errorMessage) {
+        setCombinedAiLog([errorMessage], true);
+        if (combinedAiSimulation) combinedAiSimulation.classList.add('ai-simulation--error');
+        showNotification(errorMessage, 'error');
+        updateProgress(0);
+        return;
+    }
+
+    const jobId = result && result.job_id;
+    if (!jobId) {
+        updateProgress(0);
+        return;
+    }
+
+    let stepIndex = 0;
+
+    function showNextAiStep() {
+        if (stepIndex >= combinedAiStepMessages.length) return;
+        const lines = combinedAiStepMessages.slice(0, stepIndex + 1);
+        setCombinedAiLog(lines, false, false);
+        stepIndex += 1;
+        const delay = getNextAiStepDelayMs(stepIndex);
+        combinedAiStepTimer = setTimeout(showNextAiStep, delay);
+    }
+    showNextAiStep();
+
+    function pollStatus() {
+        fetch(`${API_BASE_URL}/upload-combined-status/${encodeURIComponent(jobId)}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'ready') {
+                    stopCombinedTimers();
+                    updateProgress(100);
+                    hideNotification();
+                    showNotification('Общий отчет сформирован', 'success');
+                    const rows = data.rows || [];
+                    displayCombinedReport(rows);
+                    if (combinedReportDownload && data.report_file) {
+                        combinedReportDownload.href = `${API_BASE_URL}/download-report/${encodeURIComponent(data.report_file)}`;
+                        combinedReportDownload.style.display = 'inline-block';
+                    }
+                    saveCombinedReportCache(data.report_file || '', rows);
+                    setTimeout(() => {
+                        setCombinedAiLog(['Запрос выполнен!'], false, false, true);
+                        if (combinedAiSimulation) combinedAiSimulation.classList.add('ai-simulation--done');
+                    }, 2000);
+                    return;
+                }
+                if (data.status === 'error') {
+                    stopCombinedTimers();
+                    const err = data.error || 'Ошибка при формировании отчета';
+                    setCombinedAiLog([err], true);
+                    if (combinedAiSimulation) combinedAiSimulation.classList.add('ai-simulation--error');
+                    showNotification(err, 'error');
+                    updateProgress(0);
+                    return;
+                }
+                combinedPollTimer = setTimeout(pollStatus, POLL_INTERVAL_MS);
+            })
+            .catch(err => {
+                console.error('Ошибка опроса статуса:', err);
+                combinedPollTimer = setTimeout(pollStatus, POLL_INTERVAL_MS);
+            });
+    }
+    pollStatus();
 }
 
 function displayCombinedReport(rows) {
@@ -540,6 +683,64 @@ function displayCombinedReport(rows) {
     renderCombinedCharts(rows);
 }
 
+// Блок FM Assistant на странице общего отчета
+function setCombinedAiLog(lines, isError, animateSteps, isDone) {
+    if (!combinedAiSimulationLog) return;
+    combinedAiSimulationLog.classList.remove('ai-simulation-log--fade-out', 'ai-simulation-log--done');
+    if (isError) {
+        combinedAiSimulationLog.innerHTML = '';
+        const line = document.createElement('div');
+        line.className = 'ai-simulation-line ai-simulation-line--error';
+        line.textContent = lines[0] || '';
+        combinedAiSimulationLog.appendChild(line);
+        return;
+    }
+    if (isDone) {
+        const onFade = () => {
+            combinedAiSimulationLog.removeEventListener('transitionend', onFade);
+            combinedAiSimulationLog.innerHTML = '';
+            const line = document.createElement('div');
+            line.className = 'ai-simulation-line ai-simulation-line--success';
+            line.textContent = lines[0] || 'Запрос выполнен!';
+            combinedAiSimulationLog.appendChild(line);
+            combinedAiSimulationLog.classList.remove('ai-simulation-log--fade-out');
+            combinedAiSimulationLog.classList.add('ai-simulation-log--done');
+        };
+        combinedAiSimulationLog.addEventListener('transitionend', onFade);
+        requestAnimationFrame(() => {
+            combinedAiSimulationLog.classList.add('ai-simulation-log--fade-out');
+        });
+        return;
+    }
+    if (!animateSteps || !lines.length) {
+        combinedAiSimulationLog.innerHTML = '';
+        lines.forEach(text => {
+            const line = document.createElement('div');
+            line.className = 'ai-simulation-line';
+            line.textContent = text;
+            combinedAiSimulationLog.appendChild(line);
+        });
+        combinedAiSimulationLog.scrollTop = combinedAiSimulationLog.scrollHeight;
+        return;
+    }
+    combinedAiSimulationLog.innerHTML = '';
+    let index = 0;
+    const step = () => {
+        if (index >= lines.length) {
+            combinedAiSimulationLog.scrollTop = combinedAiSimulationLog.scrollHeight;
+            return;
+        }
+        const line = document.createElement('div');
+        line.className = 'ai-simulation-line';
+        line.textContent = lines[index];
+        combinedAiSimulationLog.appendChild(line);
+        combinedAiSimulationLog.scrollTop = combinedAiSimulationLog.scrollHeight;
+        index += 1;
+        setTimeout(step, 400);
+    };
+    step();
+}
+
 function formatPercentValue(value) {
     const num = Number(value ?? 0);
     if (!Number.isFinite(num)) return '0,00%';
@@ -547,11 +748,15 @@ function formatPercentValue(value) {
 }
 
 function renderPieToImage(rows, key, imageEl, title, description) {
-    const counts = { A: 0, B: 0, C: 0 };
+    const counts = { A: 0, B: 0, C: 0, other: 0 };
     const total = Array.isArray(rows) ? rows.length : 0;
     rows.forEach(row => {
         const raw = (row[key] ?? '').toString().trim().toUpperCase();
-        if (raw === 'A' || raw === 'B' || raw === 'C') counts[raw] += 1;
+        if (raw === 'A' || raw === 'B' || raw === 'C') {
+            counts[raw] += 1;
+        } else {
+            counts.other += 1;
+        }
     });
     if (!total) {
         imageEl.removeAttribute('src');
@@ -559,7 +764,7 @@ function renderPieToImage(rows, key, imageEl, title, description) {
         return false;
     }
 
-    const size = 520;
+    const size = 600;
     const canvas = document.createElement('canvas');
     canvas.width = size;
     canvas.height = size;
@@ -569,13 +774,13 @@ function renderPieToImage(rows, key, imageEl, title, description) {
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, size, size);
 
-    const values = [counts.A, counts.B, counts.C];
-    const labels = ['A', 'B', 'C'];
-    const colors = ['#2ecc71', '#f39c12', '#e74c3c'];
+    const values = [counts.A, counts.B, counts.C, counts.other];
+    const labels = ['A', 'B', 'C', 'без категории'];
+    const colors = ['#2ecc71', '#f39c12', '#e74c3c', '#bdc3c7'];
     let startAngle = -Math.PI / 2;
     const cx = size / 2;
     const cy = size / 2;
-    const radius = 170;
+    const radius = 200;
 
     values.forEach((value, index) => {
         const slice = total > 0 ? (value / total) * Math.PI * 2 : 0;
@@ -587,12 +792,12 @@ function renderPieToImage(rows, key, imageEl, title, description) {
         ctx.fillStyle = colors[index];
         ctx.fill();
 
-        if (value > 0) {
+        if (value > 0 && slice > 0.15) {
             const mid = startAngle + slice / 2;
             const tx = cx + Math.cos(mid) * (radius * 0.65);
             const ty = cy + Math.sin(mid) * (radius * 0.65);
             const pct = ((value / total) * 100).toFixed(1);
-            ctx.fillStyle = '#ffffff';
+            ctx.fillStyle = index === 3 ? '#5a6d88' : '#ffffff';
             ctx.font = 'bold 22px Arial';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -603,7 +808,7 @@ function renderPieToImage(rows, key, imageEl, title, description) {
     });
 
     ctx.beginPath();
-    ctx.arc(cx, cy, 78, 0, Math.PI * 2);
+    ctx.arc(cx, cy, 92, 0, Math.PI * 2);
     ctx.fillStyle = '#ffffff';
     ctx.fill();
     ctx.fillStyle = '#1f2f46';
@@ -614,9 +819,15 @@ function renderPieToImage(rows, key, imageEl, title, description) {
     ctx.fillStyle = '#5a6d88';
     ctx.fillText('товаров', cx, cy + 20);
 
-    const legendY = size - 90;
+    const legendRow0Y = size - 100;
+    const legendRow1Y = size - 62;
+    const legendCol0 = 90;
+    const legendCol1 = 320;
     labels.forEach((label, i) => {
-        const x = 85 + i * 145;
+        const row = i < 2 ? 0 : 1;
+        const col = i % 2;
+        const x = col === 0 ? legendCol0 : legendCol1;
+        const legendY = row === 0 ? legendRow0Y : legendRow1Y;
         const value = values[i];
         const pct = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
         ctx.fillStyle = colors[i];
@@ -624,12 +835,90 @@ function renderPieToImage(rows, key, imageEl, title, description) {
         ctx.fillStyle = '#1f2f46';
         ctx.font = 'bold 16px Arial';
         ctx.textAlign = 'left';
-        ctx.fillText(`${label}: ${value} (${pct}%)`, x + 26, legendY + 14);
+        ctx.fillText(`${label}: ${value} шт. (${pct}%)`, x + 26, legendY + 14);
     });
 
     imageEl.src = canvas.toDataURL('image/png');
     imageEl.onclick = () => openFullscreenChart(imageEl.id, title, description);
     return true;
+}
+
+function parseReportDate(value) {
+    if (value == null || value === '') return null;
+    const s = String(value).trim();
+    if (!s) return null;
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+}
+
+function formatReportDateRange(rows) {
+    if (!rows || rows.length === 0) return null;
+    let minTs = Infinity;
+    let maxTs = -Infinity;
+    rows.forEach(row => {
+        const d = parseReportDate(row['Дата последнего выхода']);
+        if (d) {
+            const t = d.getTime();
+            if (t < minTs) minTs = t;
+            if (t > maxTs) maxTs = t;
+        }
+    });
+    if (minTs === Infinity || maxTs === -Infinity) return null;
+    const fmt = d => `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
+    return `${fmt(new Date(minTs))} — ${fmt(new Date(maxTs))}`;
+}
+
+function fillCombinedChartsSummary(rows) {
+    const el = document.getElementById('combinedChartsSummary');
+    if (!el) return;
+    const count = Array.isArray(rows) ? rows.length : 0;
+    const range = formatReportDateRange(rows);
+    el.innerHTML = '';
+    el.appendChild(document.createTextNode('Проанализировано товаров: '));
+    const strongCount = document.createElement('strong');
+    strongCount.textContent = String(count);
+    el.appendChild(strongCount);
+    if (range) {
+        el.appendChild(document.createTextNode('. Период отчёта: '));
+        const strongRange = document.createElement('strong');
+        strongRange.textContent = range;
+        el.appendChild(strongRange);
+        el.appendChild(document.createTextNode('.'));
+    } else {
+        el.appendChild(document.createTextNode('.'));
+    }
+}
+
+function fillCombinedTopTable(bodyId, rows, sortKey, valueLabel) {
+    const tbody = document.getElementById(bodyId);
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    if (!rows || rows.length === 0) return;
+    const key = sortKey;
+    const sorted = [...rows]
+        .filter(r => (Number(r[key]) || 0) > 0)
+        .sort((a, b) => (Number(b[key]) || 0) - (Number(a[key]) || 0))
+        .slice(0, 10);
+    sorted.forEach((row, i) => {
+        const tr = document.createElement('tr');
+        const name = (row['НАЗВАНИЕ'] ?? row['АРТИКУЛ'] ?? '—').toString().trim() || '—';
+        const val = row[key] != null ? Number(row[key]) : 0;
+        tr.innerHTML = `<td>${i + 1}</td><td title="${escapeHtml(name)}">${escapeHtml(name)}</td><td>${formatNumber(val)}</td>`;
+        tbody.appendChild(tr);
+    });
+}
+
+function escapeHtml(s) {
+    const div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
+}
+
+function formatNumber(n) {
+    if (n == null || !Number.isFinite(n)) return '0';
+    return Number.isInteger(n) ? String(n) : Number(n).toFixed(2).replace('.', ',');
 }
 
 function renderCombinedCharts(rows) {
@@ -646,8 +935,15 @@ function renderCombinedCharts(rows) {
         weightAbcChartImg.removeAttribute('src');
         abcChartImg.onclick = null;
         weightAbcChartImg.onclick = null;
+        document.getElementById('combinedChartsSummary').innerHTML = '';
+        ['combinedTopOrdersBody', 'combinedTopPickedUnitsBody', 'combinedTopLinesBody', 'combinedTopReapproBody'].forEach(id => {
+            const t = document.getElementById(id);
+            if (t) t.innerHTML = '';
+        });
         return;
     }
+
+    fillCombinedChartsSummary(rows);
 
     const hasMainAbc = renderPieToImage(
         rows,
@@ -663,6 +959,11 @@ function renderCombinedCharts(rows) {
         'ABC Категории по весу',
         'Распределение товаров по весовым категориям A, B, C.'
     );
+
+    fillCombinedTopTable('combinedTopOrdersBody', rows, 'Кол-во заказов');
+    fillCombinedTopTable('combinedTopPickedUnitsBody', rows, 'Выход в штуках');
+    fillCombinedTopTable('combinedTopLinesBody', rows, 'Кол-во линий');
+    fillCombinedTopTable('combinedTopReapproBody', rows, 'Кол-во коробов реапро');
 
     chartsContainer.style.display = (hasMainAbc || hasWeightAbc) ? 'block' : 'none';
     noChartsMessage.style.display = (hasMainAbc || hasWeightAbc) ? 'none' : 'block';
@@ -1392,6 +1693,12 @@ document.addEventListener('DOMContentLoaded', function() {
         checkExistingData({ showNotifications: INITIAL_LOAD_SHOW_NOTIFICATIONS });
     }, 1000);
     
+    // Восстановление общего отчёта из сессии (страница «Общий отчёт»)
+    if (document.getElementById('combinedReportDownload')) {
+        loadCombinedReportFromCache();
+        const clearBtn = document.getElementById('combinedClearDataBtn');
+        if (clearBtn) clearBtn.addEventListener('click', clearCombinedReportData);
+    }
 });
 
 // =============== ПАНЕЛЬ ИНФОРМАЦИИ ===============

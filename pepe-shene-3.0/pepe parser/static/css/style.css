@@ -27,9 +27,16 @@ body {
     color: #fff;
 }
 
-.penis{
+.heading {
     text-decoration: none;
     color: #fff;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
+}
+
+h1, h2, h3, .upload-title {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
 }
 
 .header-links a {
@@ -308,6 +315,126 @@ body {
 
 .combined-download-btn:hover {
     background: #296e45;
+}
+
+.combined-clear-section {
+    margin-top: 24px;
+    margin-bottom: 32px;
+}
+
+.combined-clear-btn {
+    background: #8b3a3a;
+    color: #fff;
+}
+
+.combined-clear-btn:hover {
+    background: #722e2e;
+}
+
+/* Имитация работы модели FM Assistant под кнопкой "Сформировать отчет" */
+.ai-simulation {
+    max-width: 620px;
+    margin: 16px auto 0 auto;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: #f4f6fb;
+    border: 1px dashed #c5cfe4;
+    color: #6b7788;
+    font-size: 12px;
+}
+
+.ai-simulation-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.ai-simulation-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #4caf50;
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.5);
+    animation: aiPulse 1.5s infinite;
+}
+
+.ai-simulation-title {
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 12px;
+}
+
+.ai-simulation-log {
+    max-height: 110px;
+    overflow-y: auto;
+    transition: opacity 0.5s ease;
+}
+
+.ai-simulation-log--fade-out {
+    opacity: 0;
+}
+
+.ai-simulation-line--error {
+    color: #c0392b;
+    font-weight: 500;
+}
+
+.ai-simulation-line--success {
+    color: #27ae60;
+    font-weight: 600;
+}
+
+.ai-simulation--error .ai-simulation-dot {
+    background: #e74c3c;
+    animation: none;
+}
+
+.ai-simulation--done .ai-simulation-dot {
+    background: #27ae60;
+    animation: none;
+}
+
+.ai-simulation-line {
+    opacity: 0;
+    transform: translateY(4px);
+    animation: aiLineIn 0.35s ease forwards;
+    margin-bottom: 2px;
+}
+
+.ai-simulation-line:last-child {
+    margin-bottom: 0;
+}
+
+.ai-simulation-placeholder {
+    font-style: italic;
+    color: #9aa4b6;
+}
+
+@keyframes aiPulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.5);
+    }
+    70% {
+        transform: scale(1.2);
+        box-shadow: 0 0 0 6px rgba(76, 175, 80, 0);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+    }
+}
+
+@keyframes aiLineIn {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @media (max-width: 980px) {
@@ -645,6 +772,66 @@ tr:last-child td {
     color: #7f8c8d;
     line-height: 1.6;
     margin: 0;
+}
+
+/* Иконка подсказки (вопросительный знак в кружочке) у заголовка графика */
+.chart-help {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    margin-left: 6px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #5a6d88;
+    background: #e8ecf1;
+    border: 1px solid #c5cfe4;
+    border-radius: 50%;
+    cursor: help;
+    vertical-align: middle;
+    position: relative;
+    line-height: 1;
+}
+
+.chart-help:hover {
+    color: #1f2f46;
+    background: #d4e6f7;
+    border-color: #92b7e7;
+}
+
+.chart-header {
+    position: relative;
+}
+
+.chart-tooltip {
+    visibility: hidden;
+    opacity: 0;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 20;
+    max-width: 380px;
+    margin-top: 8px;
+    padding: 12px 14px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #2c3e50;
+    background: #fff;
+    border: 1px solid #d7e5f6;
+    border-radius: 10px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+    pointer-events: none;
+}
+
+.chart-header:has(.chart-help:hover) .chart-tooltip {
+    visibility: visible;
+    opacity: 1;
+}
+
+.chart-tooltip strong {
+    color: #1f2f46;
 }
 
 /* Контент графика */
@@ -1988,6 +2175,92 @@ button:active,
 
 .combined-charts-section {
     margin-bottom: 40px;
+}
+
+.combined-charts-summary {
+    margin-bottom: 24px;
+    padding: 14px 18px;
+    background: #f0f4fa;
+    border-radius: 12px;
+    border: 1px solid #d7e5f6;
+    font-size: 15px;
+    color: #2c3e50;
+}
+
+.combined-charts-summary strong {
+    color: #1f2f46;
+}
+
+.combined-tops-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-top: 24px;
+}
+
+@media (max-width: 1024px) {
+    .combined-tops-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+.combined-top-card {
+    overflow: hidden;
+}
+
+.combined-top-card .chart-content {
+    min-height: auto;
+    padding: 10px 12px;
+    overflow: auto;
+    max-width: 100%;
+}
+
+.combined-top-table {
+    width: 100%;
+    min-width: 0;
+    border-collapse: collapse;
+    font-size: 12px;
+    table-layout: fixed;
+}
+
+.combined-top-table th,
+.combined-top-table td {
+    padding: 5px 6px;
+    text-align: left;
+    border-bottom: 1px solid #eaeaea;
+}
+
+.combined-top-table th {
+    background: #f0f4fa;
+    color: #1f2f46;
+    font-weight: 600;
+}
+
+.combined-top-table th:first-child,
+.combined-top-table td:first-child {
+    width: 7%;
+    text-align: center;
+}
+
+.combined-top-table td:first-child {
+    color: #5a6d88;
+    font-weight: 600;
+}
+
+.combined-top-table th:nth-child(2),
+.combined-top-table td:nth-child(2) {
+    max-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.combined-top-table th:last-child,
+.combined-top-table td:last-child {
+    width: 15%;
+    text-align: center;
+    font-weight: 600;
+    color: #2c3e50;
 }
 
 .warehouse-page-container {
