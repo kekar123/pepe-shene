@@ -4,8 +4,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+import json
+import os
 import re
 import sqlite3
+import urllib.error
+import urllib.request
 
 
 NO_DATA_RESPONSE = "В базе данных нет информации для ответа на этот вопрос."
@@ -28,7 +32,12 @@ class ProductRow:
 
 
 class WarehouseChatAssistant:
-    def __init__(self, db_path: Path, extra_db_paths: List[Path] | None = None) -> None:
+    def __init__(
+        self,
+        db_path: Path,
+        extra_db_paths: List[Path] | None = None,
+        combined_reports_dir: Path | None = None,
+    ) -> None:
         primary = Path(db_path)
         extras = [Path(p) for p in (extra_db_paths or [])]
         ordered = [primary, *extras]
@@ -43,11 +52,37 @@ class WarehouseChatAssistant:
             seen.add(key)
             self.db_paths.append(resolved)
 
-        # Fields are kept for API compatibility.
+        self.combined_reports_dir = Path(combined_reports_dir).resolve() if combined_reports_dir else None
+        self.combined_jobs_dir = (
+            (self.combined_reports_dir / "combined_jobs").resolve()
+            if self.combined_reports_dir
+            else None
+        )
+        self.use_combined_json_only = os.getenv("CHAT_USE_COMBINED_JSON", "1").lower() in {"1", "true", "yes"}
+
+        # Model backend settings.
         self.model = None
         self.model_loaded = False
         self.model_backend = "deterministic"
         self.model_error = None
+
+        self.ollama_url = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434")
+        self.ollama_model = os.getenv("OLLAMA_MODEL", "warehouse-assistant")
+        self.use_ollama = os.getenv("CHAT_USE_OLLAMA", "1").lower() in {"1", "true", "yes"}
+        self.force_ollama = os.getenv("CHAT_FORCE_OLLAMA", "0").lower() in {"1", "true", "yes"}
+        self.llm_mode = os.getenv("CHAT_LLM_MODE", "auto").strip().lower()
+        try:
+            self.ollama_temperature = float(os.getenv("OLLAMA_TEMPERATURE", "0.1"))
+        except Exception:
+            self.ollama_temperature = 0.1
+        try:
+            self.ollama_top_p = float(os.getenv("OLLAMA_TOP_P", "0.9"))
+        except Exception:
+            self.ollama_top_p = 0.9
+        try:
+            self.ollama_max_tokens = int(os.getenv("OLLAMA_MAX_TOKENS", "260"))
+        except Exception:
+            self.ollama_max_tokens = 260
 
         self.stop_words = {
             "и",
@@ -103,15 +138,110 @@ class WarehouseChatAssistant:
         if not question:
             return self._response(NO_DATA_RESPONSE, source="guard")
 
+        q_norm = self._normalize(question)
+        intent = self._parse_intent(q_norm)
+
+        if self.use_combined_json_only:
+            summary = self._load_latest_combined_summary()
+            rows = self._load_latest_combined_rows()
+            if not summary:
+                return self._response(NO_DATA_RESPONSE, source="db")
+
+            deterministic_answer = self._answer_from_combined_summary(question, q_norm, intent, summary, rows)
+            if deterministic_answer:
+                if deterministic_answer in {NO_DATA_RESPONSE, CLARIFY_RESPONSE}:
+                    if self._should_use_ollama(intent):
+                        ollama_answer = self._answer_with_ollama(
+                            question,
+                            [],
+                            {},
+                            summary,
+                            deterministic_answer=deterministic_answer,
+                        )
+                        if ollama_answer:
+                            self.model_loaded = True
+                            self.model_backend = "ollama"
+                            return self._response(ollama_answer, source="ollama")
+                    return self._response(deterministic_answer, source="deterministic")
+
+                if self._should_use_ollama(intent):
+                    ollama_answer = self._answer_with_ollama(
+                        question,
+                        [],
+                        {},
+                        summary,
+                        deterministic_answer=deterministic_answer,
+                    )
+                    if ollama_answer:
+                        self.model_loaded = True
+                        self.model_backend = "ollama"
+                        return self._response(ollama_answer, source="ollama")
+                return self._response(deterministic_answer, source="deterministic")
+
+            if self._should_use_ollama(intent):
+                ollama_answer = self._answer_with_ollama(
+                    question,
+                    [],
+                    {},
+                    summary,
+                    deterministic_answer=CLARIFY_RESPONSE,
+                )
+                if ollama_answer:
+                    self.model_loaded = True
+                    self.model_backend = "ollama"
+                    return self._response(ollama_answer, source="ollama")
+
+            # When no deterministic answer is available, always prefer LLM response if enabled.
+            if self.use_ollama:
+                ollama_answer = self._answer_with_ollama(
+                    question,
+                    [],
+                    {},
+                    summary,
+                    deterministic_answer=CLARIFY_RESPONSE,
+                )
+                if ollama_answer:
+                    self.model_loaded = True
+                    self.model_backend = "ollama"
+                    return self._response(ollama_answer, source="ollama")
+            return self._response(CLARIFY_RESPONSE, source="deterministic")
+
         rows, rows_by_db = self._load_all_rows()
         if not rows:
             return self._response(NO_DATA_RESPONSE, source="db")
 
-        q_norm = self._normalize(question)
-        intent = self._parse_intent(q_norm)
         summary = self._build_summary(rows)
-        answer = self._handle_intent(question, q_norm, intent, rows, rows_by_db, summary)
-        return self._response(answer, source="deterministic", rows=len(rows))
+        deterministic_answer = self._handle_intent(question, q_norm, intent, rows, rows_by_db, summary)
+
+        if deterministic_answer in {NO_DATA_RESPONSE, CLARIFY_RESPONSE}:
+            if self._should_use_ollama(intent):
+                ollama_answer = self._answer_with_ollama(
+                    question,
+                    rows,
+                    rows_by_db,
+                    summary,
+                    deterministic_answer=deterministic_answer,
+                )
+                if ollama_answer:
+                    self.model_loaded = True
+                    self.model_backend = "ollama"
+                    return self._response(ollama_answer, source="ollama", rows=len(rows))
+            return self._response(deterministic_answer, source="deterministic", rows=len(rows))
+
+        if self._should_use_ollama(intent):
+            ollama_answer = self._answer_with_ollama(
+                question,
+                rows,
+                rows_by_db,
+                summary,
+                deterministic_answer=deterministic_answer,
+            )
+            if ollama_answer:
+                self.model_loaded = True
+                self.model_backend = "ollama"
+                return self._response(ollama_answer, source="ollama", rows=len(rows))
+
+        return self._response(deterministic_answer, source="deterministic", rows=len(rows))
 
     def _response(self, answer: str, source: str, rows: int | None = None) -> Dict[str, Any]:
         payload: Dict[str, Any] = {
@@ -158,6 +288,581 @@ class WarehouseChatAssistant:
             "categories": categories,
             "limit": limit,
         }
+
+    def _greeting_response(self, question: str) -> Optional[str]:
+        q = self._normalize(question)
+        greetings = [
+            "привет",
+            "здравств",
+            "добрый день",
+            "добрый вечер",
+            "доброе утро",
+            "хай",
+            "hello",
+        ]
+        if any(g in q for g in greetings):
+            return "Здравствуйте. Задайте вопрос по логистике или складу."
+        return None
+
+    def _explain_term(self, question: str) -> Optional[str]:
+        q = self._normalize(question)
+        glossary = {
+            "пикинг": (
+                "Пикинг — это зона и процесс отбора товаров по заказам. "
+                "Обычно это места хранения, из которых комплектуют отгрузки. "
+                "Если нужно, могу показать конкретные аллеи и места пикинга по артикулу."
+            ),
+            "реапро": (
+                "Реапро — это пополнение зоны пикинга (re-appro). "
+                "Задача — вовремя подвозить товары в пикинг, чтобы не было дефицита при отборе."
+            ),
+            "abc": (
+                "ABC‑анализ — это группировка товаров по важности. "
+                "A — самые важные/часто отбираемые, B — средние, C — редкие. "
+                "Могу показать распределение по ABC в общем отчете."
+            ),
+            "xyz": (
+                "XYZ‑анализ — это группировка по стабильности спроса. "
+                "X — стабильный спрос, Y — сезонные колебания, Z — нерегулярный спрос."
+            ),
+        }
+        for key, text in glossary.items():
+            if key in q:
+                return text
+        return None
+
+    def _load_latest_combined_summary(self) -> Optional[Dict[str, Any]]:
+        if not self.combined_reports_dir:
+            return None
+        try:
+            files = sorted(
+                self.combined_reports_dir.glob("combined_report_*.json"),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True,
+            )
+        except Exception:
+            return None
+        if not files:
+            return None
+        latest = files[0]
+        try:
+            with latest.open("r", encoding="utf-8") as f:
+                payload = json.load(f)
+            if not isinstance(payload, dict):
+                return None
+            return payload
+        except Exception:
+            return None
+
+    def _load_latest_combined_rows(self) -> List[Dict[str, Any]]:
+        if not self.combined_jobs_dir:
+            return []
+        try:
+            files = sorted(
+                self.combined_jobs_dir.glob("*.json"),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True,
+            )
+        except Exception:
+            return []
+        for path in files[:5]:
+            try:
+                with path.open("r", encoding="utf-8") as f:
+                    payload = json.load(f)
+                if not isinstance(payload, dict):
+                    continue
+                if payload.get("status") != "ready":
+                    continue
+                rows = payload.get("rows")
+                if isinstance(rows, list):
+                    return rows
+            except Exception:
+                continue
+        return []
+
+    def _answer_from_combined_summary(
+        self,
+        question: str,
+        q_norm: str,
+        intent: Dict[str, Any],
+        summary: Dict[str, Any],
+        rows: List[Dict[str, Any]] | None = None,
+    ) -> Optional[str]:
+        rows = rows or []
+        rows_answer = self._answer_from_combined_rows(question, q_norm, rows)
+        if rows_answer:
+            return rows_answer
+
+        if "заказыва" in q_norm or ("чаще всего" in q_norm and "товар" in q_norm):
+            top_orders = summary.get("топ10_по_заказам") or []
+            if top_orders:
+                item = top_orders[0]
+                name = item.get("название") or item.get("РќРђР—Р’РђРќРР•") or ""
+                article = item.get("артикул") or item.get("РђР РўРРљРЈР›") or ""
+                value = item.get("значение") or item.get("Р·РЅР°С‡РµРЅРёРµ") or ""
+                if name:
+                    return f"Чаще всего заказывают: {name} (арт. {article}), заказов: {value}."
+                if article:
+                    return f"Чаще всего заказывают артикул {article}, заказов: {value}."
+            return NO_DATA_RESPONSE
+
+        # Category counts (ABC by frequency or weight).
+        categories: List[str] = intent["categories"]
+        abc_freq = summary.get("abc_по_частоте") or {}
+        abc_weight = summary.get("abc_по_весу") or {}
+
+        asks_weight = "вес" in q_norm or "весу" in q_norm
+        abc_source = abc_weight if asks_weight and abc_weight else abc_freq
+
+        if categories and intent["asks_count"]:
+            parts = []
+            for cat in categories:
+                count = abc_source.get(cat)
+                if count is None:
+                    continue
+                parts.append(f"{cat}: {count}")
+            if parts:
+                label = "по весу" if abc_source is abc_weight else "по частоте"
+                return f"Количество товаров по ABC ({label}): " + ", ".join(parts) + "."
+            return NO_DATA_RESPONSE
+
+        if intent["asks_count"] and not categories:
+            total_master = summary.get("количество_артикулов_мастер")
+            total_picking = summary.get("количество_товаров_в_пикинге")
+            if total_master is not None or total_picking is not None:
+                return (
+                    f"Артикулов в мастер-данных: {total_master or 0}. "
+                    f"Товаров в пикинге: {total_picking or 0}."
+                )
+
+        # Top lists.
+        if intent["asks_top"] or intent["asks_list"]:
+            key = None
+            metric_label = ""
+            if "заказ" in q_norm:
+                key = "топ10_по_заказам"
+                metric_label = "заказов"
+            elif "линий" in q_norm or "линии" in q_norm:
+                key = "топ10_по_количеству_линий"
+                metric_label = "линий"
+            elif "реапро" in q_norm or "короб" in q_norm:
+                key = "топ10_по_коробам_реапро"
+                metric_label = "коробов реапро"
+            elif "штук" in q_norm or "выход" in q_norm:
+                key = "топ10_по_выходу_в_штуках"
+                metric_label = "штук"
+
+            if key and summary.get(key):
+                return self._format_summary_list(summary[key], intent["limit"], metric_label)
+
+        if intent["asks_bottom"]:
+            if "залеж" in q_norm or "долго" in q_norm or "стар" in q_norm:
+                key = "топ10_залежавшихся"
+                metric_label = "дней без движения"
+            else:
+                key = "топ10_худших"
+                metric_label = "заказов/выхода"
+            if summary.get(key):
+                return self._format_summary_list(summary[key], intent["limit"], metric_label)
+
+        # Product lookup inside summary lists.
+        product_tokens = self._extract_query_tokens(question)
+        hit = self._find_in_summary_lists(summary, product_tokens)
+        if hit:
+            return hit
+
+        # General fallback for ABC distribution.
+        if intent["asks_category_info"] and (abc_freq or abc_weight):
+            parts = []
+            if abc_freq:
+                parts.append("ABC по частоте: " + ", ".join(f"{k}: {v}" for k, v in abc_freq.items()))
+            if abc_weight:
+                parts.append("ABC по весу: " + ", ".join(f"{k}: {v}" for k, v in abc_weight.items()))
+            return ". ".join(parts) + "."
+
+        return None
+
+    def _answer_from_combined_rows(self, question: str, q_norm: str, rows: List[Dict[str, Any]]) -> Optional[str]:
+        if not rows:
+            return None
+
+        article = self._extract_article_code(question)
+        if article:
+            found = self._find_row_by_article(rows, article)
+            if found:
+                name = self._row_get(found, ["НАЗВАНИЕ", "РќРђР—Р’РђРќРР•"])
+                aisle = self._row_get(found, ["Аллея пикинг", "РђР»Р»РµСЏ РїРёРєРёРЅРі"])
+                place = self._row_get(found, ["Место пикинг", "РњРµСЃС‚Рѕ РїРёРєРёРЅРі"])
+                if aisle is None and place is None:
+                    return NO_DATA_RESPONSE
+                label = name or article
+                return f"{label}: аллея {aisle}, место {place}."
+
+        if "алле" in q_norm:
+            aisles = set()
+            for row in rows:
+                val = self._row_get(row, ["Аллея пикинг", "РђР»Р»РµСЏ РїРёРєРёРЅРі"])
+                if val is None:
+                    continue
+                try:
+                    aisles.add(int(float(val)))
+                except Exception:
+                    continue
+            if aisles:
+                return f"Учитывается аллей: {len(aisles)}."
+            return NO_DATA_RESPONSE
+
+        if any(word in q_norm for word in ["самый тяжел", "самый тяжёл", "тяжел", "тяжёл"]):
+            best = None
+            best_weight = None
+            for row in rows:
+                weight = self._row_get(row, ["Вес", "Р’РµСЃ"])
+                if weight is None:
+                    continue
+                try:
+                    w = float(weight)
+                except Exception:
+                    continue
+                if best_weight is None or w > best_weight:
+                    best_weight = w
+                    best = row
+            if best and best_weight is not None:
+                name = self._row_get(best, ["НАЗВАНИЕ", "РќРђР—Р’РђРќРР•"])
+                article = self._row_get(best, ["АРТИКУЛ", "РђР РўРРљРЈР›"])
+                return f"Самый тяжелый товар: {name or article}, вес {best_weight}."
+            return NO_DATA_RESPONSE
+
+        return None
+
+    def _extract_article_code(self, text: str) -> Optional[str]:
+        pattern = re.compile(r"\b[A-Z]{2,}\d+[A-Z0-9-]*\b", re.IGNORECASE)
+        match = pattern.search(text.upper())
+        return match.group(0) if match else None
+
+    def _find_row_by_article(self, rows: List[Dict[str, Any]], article: str) -> Optional[Dict[str, Any]]:
+        key_variants = ["АРТИКУЛ", "РђР РўРРљРЈР›", "article", "арт", "артикул"]
+        target = article.strip().upper()
+        for row in rows:
+            value = self._row_get(row, key_variants)
+            if value is None:
+                continue
+            if str(value).strip().upper() == target:
+                return row
+        return None
+
+    def _row_get(self, row: Dict[str, Any], keys: List[str]) -> Optional[Any]:
+        for key in keys:
+            if key in row:
+                return row.get(key)
+        normalized = {self._norm_key(k): k for k in row.keys()}
+        for key in keys:
+            nk = self._norm_key(key)
+            real = normalized.get(nk)
+            if real is not None:
+                return row.get(real)
+        return None
+
+    def _norm_key(self, value: str) -> str:
+        v = str(value).strip().lower()
+        for ch in [" ", "\t", "\n", "\r", ".", ",", "-", "_", "/", "\\", "(", ")", "[", "]", "{", "}", '"', "'"]:
+            v = v.replace(ch, "")
+        return v
+
+    def _format_summary_list(self, rows: List[Dict[str, Any]], limit: int, metric_label: str) -> str:
+        if not rows:
+            return NO_DATA_RESPONSE
+        parts = []
+        for idx, row in enumerate(rows[:limit], start=1):
+            name = row.get("название") or row.get("РќРђР—Р’РђРќРР•") or row.get("name") or ""
+            val = row.get("значение") or row.get("Р·РЅР°С‡РµРЅРёРµ") or row.get("value") or ""
+            if not name:
+                name = row.get("артикул") or row.get("РђР РўРРљРЈР›") or row.get("article") or ""
+            if metric_label:
+                parts.append(f"{idx}) {name} — {val} {metric_label}")
+            else:
+                parts.append(f"{idx}) {name} — {val}")
+        return "; ".join(parts) + "."
+
+    def _find_in_summary_lists(self, summary: Dict[str, Any], tokens: List[str]) -> Optional[str]:
+        if not tokens:
+            return None
+        list_keys = [
+            "топ10_по_заказам",
+            "топ10_по_выходу_в_штуках",
+            "топ10_по_количеству_линий",
+            "топ10_по_коробам_реапро",
+            "топ10_худших",
+            "топ10_залежавшихся",
+        ]
+        for key in list_keys:
+            rows = summary.get(key) or []
+            for row in rows:
+                name = str(row.get("название") or row.get("name") or "").lower()
+                if name and all(t in name for t in tokens):
+                    val = row.get("значение") or row.get("value") or ""
+                    return f"{row.get('название') or row.get('name')}: {val}."
+        return None
+
+    def _is_capabilities_question(self, question: str) -> bool:
+        q = self._normalize(question)
+        triggers = [
+            "что умеешь",
+            "что ты умеешь",
+            "что ты можешь",
+            "что умеет",
+            "чем помогаешь",
+            "помощь",
+            "справка",
+            "кто ты",
+            "ты кто",
+            "о себе",
+            "как пользоваться",
+            "как работать",
+            "инструкция",
+        ]
+        return any(t in q for t in triggers)
+
+    def _capabilities_response(self) -> str:
+        return (
+            "Я помощник по данным склада и отчетам. Могу отвечать на вопросы по товарам, "
+            "категориям ABC/XYZ, выручке, количествам, топ/анти‑топ, а также показывать "
+            "сводные показатели по базе. Если запрос не содержит данных или слишком общий, "
+            "я попрошу уточнить формулировку."
+        )
+
+    def _should_use_ollama(self, intent: Dict[str, Any]) -> bool:
+        if not self.use_ollama:
+            return False
+        if self.force_ollama:
+            return True
+
+        if self.llm_mode == "auto":
+            return True
+        return self.llm_mode == "paraphrase"
+
+    def _answer_with_ollama(
+        self,
+        question: str,
+        rows: List[ProductRow],
+        rows_by_db: Dict[str, int],
+        summary: Dict[str, Any],
+        deterministic_answer: str,
+    ) -> Optional[str]:
+        if self.llm_mode == "paraphrase":
+            prompt = self._build_paraphrase_prompt(question, rows, rows_by_db, summary, deterministic_answer)
+        elif self.llm_mode == "auto":
+            if deterministic_answer in {NO_DATA_RESPONSE, CLARIFY_RESPONSE}:
+                prompt = self._build_general_prompt(question, summary)
+            else:
+                prompt = self._build_paraphrase_prompt(question, rows, rows_by_db, summary, deterministic_answer)
+        else:
+            prompt = self._build_ollama_prompt(question, rows, rows_by_db, summary)
+        if not prompt:
+            return None
+        candidate = self._ollama_generate(prompt)
+        if not candidate:
+            return None
+        allow_questions = self.llm_mode == "auto" and deterministic_answer in {NO_DATA_RESPONSE, CLARIFY_RESPONSE}
+        if not self._validate_llm_response(candidate, allow_questions=allow_questions):
+            retry = self._build_paraphrase_retry_prompt(
+                question,
+                rows,
+                rows_by_db,
+                summary,
+                deterministic_answer,
+            )
+            if not retry:
+                return None
+            candidate = self._ollama_generate(retry)
+            if not candidate or not self._validate_llm_response(candidate, allow_questions=allow_questions):
+                return None
+        return candidate
+
+    def _build_ollama_prompt(
+        self,
+        question: str,
+        rows: List[ProductRow],
+        rows_by_db: Dict[str, int],
+        summary: Dict[str, Any],
+    ) -> str:
+        selected = self._select_rows_for_llm(question, rows)
+        payload = {
+            "summary": summary,
+            "sources": rows_by_db,
+            "rows": [
+                {
+                    "product_name": r.product_name,
+                    "quantity": r.quantity,
+                    "revenue": r.revenue,
+                    "abc_category": r.abc_category,
+                    "xyz_category": r.xyz_category,
+                    "abc_xyz_category": r.abc_xyz_category,
+                }
+                for r in selected
+            ],
+        }
+
+        instructions = (
+            "Ты помощник склада. Отвечай только на основе DATA ниже. "
+            "Всегда отвечай на русском языке. "
+            "Если данных недостаточно, ответь строго: "
+            f"\"{NO_DATA_RESPONSE}\". "
+            "Если вопрос не ясен, ответь строго: "
+            f"\"{CLARIFY_RESPONSE}\". "
+            "Не придумывай факты. Отвечай кратко и по делу."
+        )
+
+        return (
+            f"{instructions}\n\n"
+            f"QUESTION: {question}\n\n"
+            f"DATA (JSON):\n{json.dumps(payload, ensure_ascii=False)}\n"
+        )
+
+    def _build_paraphrase_prompt(
+        self,
+        question: str,
+        rows: List[ProductRow],
+        rows_by_db: Dict[str, int],
+        summary: Dict[str, Any],
+        deterministic_answer: str,
+    ) -> str:
+        selected = self._select_rows_for_llm(question, rows)
+        payload = {
+            "summary": summary,
+            "sources": rows_by_db,
+            "rows": [
+                {
+                    "product_name": r.product_name,
+                    "quantity": r.quantity,
+                    "revenue": r.revenue,
+                    "abc_category": r.abc_category,
+                    "xyz_category": r.xyz_category,
+                    "abc_xyz_category": r.abc_xyz_category,
+                }
+                for r in selected
+            ],
+        }
+
+        instructions = (
+            "ВЫПОЛНЯЙ ТОЛЬКО ИНСТРУКЦИИ НИЖЕ.\n"
+            "1) Всегда отвечай на русском языке.\n"
+            "2) НЕЛЬЗЯ добавлять новые факты или числа.\n"
+            "3) Можно ТОЛЬКО перефразировать и немного расширить ANSWER_TO_EXPAND.\n"
+            "4) Никаких вопросов пользователю.\n"
+            "5) Длина: 3–6 предложений, не более 600 символов.\n"
+            "6) Если данных недостаточно, ответь строго: "
+            f"\"{NO_DATA_RESPONSE}\".\n"
+            "7) Если вопрос не ясен, ответь строго: "
+            f"\"{CLARIFY_RESPONSE}\".\n"
+            "8) Выведи ТОЛЬКО итоговый ответ, без пояснений."
+        )
+
+        return (
+            f"{instructions}\n\n"
+            f"QUESTION: {question}\n\n"
+            f"ANSWER_TO_EXPAND: {deterministic_answer}\n\n"
+            f"DATA (JSON):\n{json.dumps(payload, ensure_ascii=False)}\n"
+        )
+
+    def _build_general_prompt(self, question: str, summary: Optional[Dict[str, Any]] = None) -> str:
+        instructions = (
+            "Ты помощник по логистике и складу. Всегда отвечай на русском.\n"
+            "Отвечай на общие вопросы о логистике, терминологии и возможностях ассистента.\n"
+            "НЕЛЬЗЯ выдумывать факты, цифры или данные по складу.\n"
+            "Если вопрос требует данных из БД/JSON, ответь строго:\n"
+            f"\"{NO_DATA_RESPONSE}\"\n"
+            "Не проси уточнений.\n"
+            "Длина ответа: 2–5 предложений, до 450 символов.\n"
+            "Выведи только итоговый ответ."
+        )
+
+        if summary:
+            data_blob = json.dumps(summary, ensure_ascii=False)
+            return f"{instructions}\n\nQUESTION: {question}\n\nDATA (JSON):\n{data_blob}\n"
+        return f"{instructions}\n\nQUESTION: {question}\n"
+
+    def _build_paraphrase_retry_prompt(
+        self,
+        question: str,
+        rows: List[ProductRow],
+        rows_by_db: Dict[str, int],
+        summary: Dict[str, Any],
+        deterministic_answer: str,
+    ) -> str:
+        payload = {
+            "summary": summary,
+            "sources": rows_by_db,
+        }
+
+        instructions = (
+            "СТРОГО ВЫПОЛНИ:\n"
+            "1) Ответ ТОЛЬКО на русском языке.\n"
+            "2) Никаких вопросов пользователю.\n"
+            "3) Никаких новых фактов и чисел.\n"
+            "4) Перепиши ANSWER_TO_EXPAND почти дословно, "
+            "допустимо только 1-2 коротких уточняющих фразы.\n"
+            "5) Длина до 500 символов.\n"
+            "6) Выведи ТОЛЬКО итоговый ответ."
+        )
+
+        return (
+            f"{instructions}\n\n"
+            f"QUESTION: {question}\n\n"
+            f"ANSWER_TO_EXPAND: {deterministic_answer}\n\n"
+            f"DATA (JSON):\n{json.dumps(payload, ensure_ascii=False)}\n"
+        )
+
+    def _select_rows_for_llm(self, question: str, rows: List[ProductRow]) -> List[ProductRow]:
+        tokens = self._extract_query_tokens(question)
+        hits = self._find_products(tokens, rows)
+        if hits:
+            return hits[:50]
+        return rows[:50]
+
+    def _ollama_generate(self, prompt: str) -> Optional[str]:
+        url = self.ollama_url.rstrip("/") + "/api/generate"
+        body = {
+            "model": self.ollama_model,
+            "prompt": prompt,
+            "stream": False,
+            "options": {
+                "temperature": self.ollama_temperature,
+                "top_p": self.ollama_top_p,
+                "num_predict": self.ollama_max_tokens,
+            },
+        }
+
+        data = json.dumps(body, ensure_ascii=False).encode("utf-8")
+        request = urllib.request.Request(
+            url,
+            data=data,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+
+        try:
+            with urllib.request.urlopen(request, timeout=6) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+                text = (payload.get("response") or "").strip()
+                return text or None
+        except (urllib.error.URLError, urllib.error.HTTPError, ValueError, TimeoutError):
+            return None
+
+    def _validate_llm_response(self, text: str, allow_questions: bool = False) -> bool:
+        if not text:
+            return False
+        if len(text) > 600:
+            return False
+        # Reject if it contains too much Latin or looks like it asks questions.
+        latin = sum(1 for ch in text if "a" <= ch.lower() <= "z")
+        cyr = sum(1 for ch in text if "а" <= ch.lower() <= "я" or ch.lower() == "ё")
+        total_letters = latin + cyr
+        min_ratio = 0.6 if allow_questions else 0.8
+        if total_letters > 0 and cyr / total_letters < min_ratio:
+            return False
+        if not allow_questions and "?" in text:
+            return False
+        return True
 
     def _handle_intent(
         self,

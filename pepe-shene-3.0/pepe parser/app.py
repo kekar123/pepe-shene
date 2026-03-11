@@ -235,6 +235,7 @@ if CHAT_ASSISTANT_AVAILABLE:
         chat_assistant = WarehouseChatAssistant(
             main_db_path,
             extra_db_paths=[secondary_db_path, analysis_results_db_path],
+            combined_reports_dir=ANALYSIS_RESULTS_DIR,
         )
     except Exception:
         chat_assistant = None

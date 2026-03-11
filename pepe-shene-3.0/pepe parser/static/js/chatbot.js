@@ -79,6 +79,9 @@ async function sendMessage() {
         isAwaitingResponse = false;
         setInputState(false, input, sendButton);
         scrollToBottom();
+        if (input) {
+            input.focus();
+        }
     }
 }
 

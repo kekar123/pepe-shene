@@ -301,11 +301,43 @@
     </div>
 </div>
 
+<!-- Чат-бот кнопка -->
+<button class="chat-bot-btn" onclick="toggleChat()">
+    <div class="bot-avatar">🤖</div>
+</button>
+
+<!-- Окно чат-бота -->
+<div class="chat-window" id="chatWindow">
+    <div class="chat-header">
+        <div class="chat-title">
+            <div class="bot-avatar-small">🤖</div>
+            <h3>Задайте свой вопрос</h3>
+        </div>
+        <button class="chat-close-btn" onclick="toggleChat()">×</button>
+    </div>
+
+    <div class="chat-body" id="chatBody">
+        <div class="chat-messages" id="chatMessages">
+            <!-- Сообщения будут добавляться здесь -->
+        </div>
+    </div>
+
+    <div class="chat-input-area">
+        <input type="text"
+               class="chat-input"
+               id="chatInput"
+               placeholder="Введите сообщение..."
+               onkeypress="handleKeyPress(event)">
+        <button class="send-btn" onclick="sendMessage()">Отправить</button>
+    </div>
+</div>
+
 <script>
     window.DISABLE_CHART_NOTIFICATIONS = true;
     window.DISABLE_DB_NOTIFICATIONS = true;
 </script>
 <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+<script src="{{ url_for('static', filename='js/chatbot.js') }}"></script>
 <script>
     (function() {
         const btn = document.getElementById('combinedRecommendationsBtn');
