@@ -331,6 +331,149 @@ h1, h2, h3, .upload-title {
     background: #722e2e;
 }
 
+.combined-recommendations-section {
+    margin: 10px 0 30px;
+}
+
+.combined-recommendations-card {
+    background: #ffffff;
+    border: 1px solid #d7e5f6;
+    border-radius: 14px;
+    padding: 20px 24px;
+    box-shadow: 0 6px 18px rgba(13, 28, 50, 0.08);
+}
+
+.combined-recommendations-card h2 {
+    text-align: left;
+    color: #1f2f46;
+    margin-bottom: 8px;
+}
+
+.combined-recommendations-subtitle {
+    color: #5d6b7a;
+    font-size: 14px;
+    margin-bottom: 14px;
+    line-height: 1.5;
+}
+
+.combined-recommendations-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.combined-recommendations-actions.centered {
+    justify-content: center;
+}
+
+.combined-recommendations-btn {
+    background: #1f2f46;
+    border-radius: 12px;
+    font-weight: 700;
+    min-width: 260px;
+}
+
+.combined-recommendations-btn:disabled {
+    background: #9aa4b6;
+    cursor: not-allowed;
+}
+
+.combined-recommendations-ai {
+    margin: 14px 0 0 0;
+}
+
+.combined-recommendations-output {
+    margin-top: 14px;
+    background: #f8fafc;
+    border: 1px solid #d7e5f6;
+    border-radius: 12px;
+    padding: 14px 16px;
+    min-height: 180px;
+    color: #24364f;
+    line-height: 1.5;
+    white-space: normal;
+}
+
+.combined-recommendations-output.empty {
+    color: #7f8c8d;
+    font-style: italic;
+}
+
+.combined-recommendations-output .rec-title {
+    font-size: 18px;
+    font-weight: 800;
+    color: #1f2f46;
+    margin-bottom: 8px;
+}
+
+.combined-recommendations-output .rec-date {
+    font-size: 14px;
+    font-weight: 600;
+    color: #4d5f7a;
+}
+
+.combined-recommendations-output .rec-section {
+    padding: 12px 0;
+    border-bottom: 1px solid #e2e8f4;
+}
+
+.combined-recommendations-output .rec-section:last-child {
+    border-bottom: none;
+}
+
+.combined-recommendations-output .rec-heading {
+    font-size: 16px;
+    font-weight: 700;
+    color: #21324d;
+    margin-bottom: 8px;
+}
+
+.combined-recommendations-output .rec-subheading {
+    font-size: 14px;
+    font-weight: 700;
+    color: #2c3e50;
+    margin: 8px 0 6px;
+}
+
+.combined-recommendations-output .rec-paragraph {
+    font-size: 14px;
+    color: #2c3e50;
+    margin: 6px 0;
+}
+
+.combined-recommendations-output .rec-note {
+    background: #eef4ff;
+    border: 1px solid #d7e5f6;
+    border-radius: 10px;
+    padding: 10px 12px;
+    color: #2a3d5e;
+    margin: 8px 0;
+    font-size: 13px;
+}
+
+.combined-recommendations-output .rec-highlight {
+    background: #fff4e6;
+    border: 1px solid #f6d3a5;
+    border-radius: 10px;
+    padding: 10px 12px;
+    color: #8a4b08;
+    margin: 10px 0;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.combined-recommendations-output .rec-list {
+    margin: 6px 0 8px 18px;
+    padding: 0;
+    font-size: 14px;
+    color: #2c3e50;
+}
+
+.combined-recommendations-output .rec-list li {
+    margin: 4px 0;
+}
+
 /* Имитация работы модели FM Assistant под кнопкой "Сформировать отчет" */
 .ai-simulation {
     max-width: 620px;

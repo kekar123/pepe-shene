@@ -33,6 +33,10 @@ const combinedTableBody = document.getElementById('combinedTableBody');
 const combinedReportDownload = document.getElementById('combinedReportDownload');
 const combinedAiSimulation = document.getElementById('combinedAiSimulation');
 const combinedAiSimulationLog = document.getElementById('combinedAiSimulationLog');
+const combinedRecommendationsBtn = document.getElementById('combinedRecommendationsBtn');
+const combinedRecommendationsOutput = document.getElementById('combinedRecommendationsOutput');
+const combinedRecommendationsAiSimulation = document.getElementById('combinedRecommendationsAiSimulation');
+const combinedRecommendationsAiLog = document.getElementById('combinedRecommendationsAiLog');
 const DISABLE_DB_NOTIFICATIONS = window.DISABLE_DB_NOTIFICATIONS === true;
 const dynamicAnalysisInfo = document.getElementById('dynamicAnalysisInfo');
 const analysisStats = document.getElementById('analysisStats');
@@ -739,6 +743,168 @@ function setCombinedAiLog(lines, isError, animateSteps, isDone) {
         setTimeout(step, 400);
     };
     step();
+}
+
+const combinedRecommendationsSteps = [
+    'FM Assistant: анализируем общий отчет...',
+    'Сопоставляем частоту отбора и весовые категории...',
+    'Ищем кандидатов на реаппро и мертвый сток...',
+    'Формируем итоговые рекомендации...'
+];
+
+const combinedRecommendationsText = [
+    'Аналитическая справка по состоянию склада (на 11.03.2026)',
+    '1. Структура ассортимента',
+    'Общее количество SKU в мастер-данных: 405.',
+    '',
+    'Товары в активном пикинге: 401. Это говорит о высокой заполненности ячеек и широком ассортименте.',
+    '',
+    'ABC-анализ по частоте отгрузок (популярность):',
+    '',
+    'A (высокая частота): 207 SKU (товары-локомотивы, требуют «горячей» зоны хранения).',
+    '',
+    'B (средняя частота): 39 SKU.',
+    '',
+    'C (низкая частота): 77 SKU.',
+    '',
+    'Вывод: Около 50% ассортимента относится к категории высокооборачиваемых. Это хорошо, но требует четкого зонирования.',
+    '',
+    'ABC-анализ по весу (объемности):',
+    '',
+    'A (тяжелые): 53 SKU.',
+    '',
+    'B (средние): 136 SKU.',
+    '',
+    'C (легкие): 139 SKU.',
+    '',
+    'Вывод: Большая часть товаров — легкие или средние по весу. Это позволяет эффективно использовать многоуровневые стеллажи и не перегружать сотрудников.',
+    '',
+    '2. Лидеры оборачиваемости (Самое "горячее")',
+    'Топ-3 самых заказываемых товара (по количеству заказов):',
+    '',
+    'PFMM29141 (Соль "Mareman") — 679 заказов. Абсолютный лидер.',
+    '',
+    'PFSP75451 (Кекс Манго-маракуйя) — 165 заказов.',
+    '',
+    'PFSP29115 (Мука блинная) — 155 заказов.',
+    '',
+    'Топ-3 по физическому объему отгрузки (выход в штуках):',
+    '',
+    'PFMM29141 (Соль) — 115 420 шт. Товар требует постоянного пополнения.',
+    '',
+    'PFSP29877 (Разрыхлитель) — 50 070 шт.',
+    '',
+    'PFSP75079 (Цедра лимона) — 46 080 шт.',
+    '',
+    'Рекомендация по топ-товарам:',
+    '',
+    'PFMM29141 (Соль) должен находиться в самой доступной зоне пикинга (например, на уровне пояса на паллетном стеллаже), так как он генерирует максимум заказов и штучного выхода. Желательно выделить под него динамическую зону хранения.',
+    '',
+    '3. Проблемные зоны: Неликвидный и "Мертвый" сток',
+    'Группа риска "Красный" (Давно не выходили):',
+    '',
+    'Количество артикулов с красной меткой: ~48 SKU.',
+    '',
+    'Самые старые позиции (более 5 месяцев без движения):',
+    '',
+    'PFSP75020 (Мука 2 сорт) — последний выход 02.10.2025 (160 дней простоя).',
+    'SFSS03073 (нет названия) — 08.10.2025 (154 дня).',
+    'PFSP29612 (Мука для лапши) — 14.10.2025 (148 дней).',
+    'Маркер: Товары с датой последнего выхода старше 90 дней (октябрь 2025 и ранее). Они занимают место и увеличивают стоимость инвентаризации.',
+    '',
+    'Группа риска "Желтый" (Низкая активность):',
+    '',
+    'Большая группа товаров с выходами в декабре-январе. Требуют мониторинга в ближайший месяц. Если по ним не будет заказов в марте, они перейдут в "красную" зону.',
+    '',
+    'Товары с нулевой активностью (Худшие):',
+    '',
+    'В топ-10 худших попали артикулы, которые есть на остатках, но не имеют отгрузок вообще при наличии заказов (например, SFOK75199, PFSP75401). Это критично: система их резервирует, но товар физически отсутствует или заблокирован.',
+    '',
+    '4. Операционные риски и замечания',
+    'Отсутствие наименований: Значительное количество позиций (особенно в красной и желтой зонах) имеют пустые поля "НАЗВАНИЕ". Это недопустимо для складского учета (WMS), так как усложняет идентификацию товара при инвентаризации и отборе.',
+    '',
+    'Гофротара в остатках: Артикулы типа GOFRO... и СТОЙКА ПУДОФФ числятся как товар, но имеют нулевое движение. Если это упаковка, она должна учитываться на отдельном субсчете или списываться сразу при поступлении, а не пылиться на полках пикинга, занимая место товара.',
+    '',
+    'Товары без движения при наличии запаса: Например, PFSP75401 (Ванильный сахар). Есть остаток, но выход 0. Необходимо проверить, не просрочен ли он, не забракован ли, или не завален ли за другими позициями в ячейке.'
+].join('\n');
+
+let combinedRecommendationsTimer = null;
+
+function stopCombinedRecommendationsTimers() {
+    if (combinedRecommendationsTimer) {
+        clearTimeout(combinedRecommendationsTimer);
+        combinedRecommendationsTimer = null;
+    }
+}
+
+function resetCombinedRecommendationsUi() {
+    stopCombinedRecommendationsTimers();
+    if (combinedRecommendationsAiSimulation) {
+        combinedRecommendationsAiSimulation.classList.remove('ai-simulation--error', 'ai-simulation--done');
+    }
+    if (combinedRecommendationsAiLog) {
+        combinedRecommendationsAiLog.classList.remove('ai-simulation-log--fade-out', 'ai-simulation-log--done');
+        combinedRecommendationsAiLog.innerHTML = '';
+    }
+}
+
+function appendCombinedRecommendationsLogLine(text) {
+    if (!combinedRecommendationsAiLog) return;
+    const line = document.createElement('div');
+    line.className = 'ai-simulation-line';
+    line.textContent = text;
+    combinedRecommendationsAiLog.appendChild(line);
+    combinedRecommendationsAiLog.scrollTop = combinedRecommendationsAiLog.scrollHeight;
+}
+
+let combinedRecommendationsRunning = false;
+
+function runCombinedRecommendationsSimulation() {
+    const handleClick = (event) => {
+        const targetBtn = event.target.closest('#combinedRecommendationsBtn');
+        if (!targetBtn) return;
+        if (combinedRecommendationsRunning || targetBtn.disabled) return;
+
+        combinedRecommendationsRunning = true;
+        resetCombinedRecommendationsUi();
+
+        const originalLabel = targetBtn.textContent;
+        targetBtn.disabled = true;
+        targetBtn.textContent = 'Генерация...';
+
+        if (combinedRecommendationsOutput) {
+            combinedRecommendationsOutput.textContent = 'Генерация рекомендаций...';
+            combinedRecommendationsOutput.classList.add('empty');
+        }
+
+        let index = 0;
+        const step = () => {
+            if (index < combinedRecommendationsSteps.length) {
+                appendCombinedRecommendationsLogLine(combinedRecommendationsSteps[index]);
+                index += 1;
+                combinedRecommendationsTimer = setTimeout(step, 420);
+                return;
+            }
+
+            combinedRecommendationsTimer = setTimeout(() => {
+                if (combinedRecommendationsAiSimulation) {
+                    combinedRecommendationsAiSimulation.classList.add('ai-simulation--done');
+                }
+                if (combinedRecommendationsOutput) {
+                    combinedRecommendationsOutput.textContent = combinedRecommendationsText;
+                    combinedRecommendationsOutput.classList.remove('empty');
+                }
+                targetBtn.disabled = false;
+                targetBtn.textContent = originalLabel;
+                combinedRecommendationsRunning = false;
+            }, 500);
+        };
+
+        step();
+    };
+
+    document.removeEventListener('click', handleClick);
+    document.addEventListener('click', handleClick);
 }
 
 function formatPercentValue(value) {
@@ -2255,6 +2421,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }, 1000);
 });
+
+runCombinedRecommendationsSimulation();
 
 
 

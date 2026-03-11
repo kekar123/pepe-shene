@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -252,6 +252,29 @@
     </main>
 </section>
 
+<section class="combined-recommendations-section">
+    <main class="result-container">
+        <div class="combined-recommendations-card">
+            <h2>Рекомендации по общему отчету</h2>
+            <p class="combined-recommendations-subtitle">Сгенерируйте итоговые рекомендации по результатам сводного отчета. Текст формируется локально с имитацией работы ИИ.</p>
+
+            <div class="combined-recommendations-actions centered">
+                <button type="button" id="combinedRecommendationsBtn" class="upload-button combined-recommendations-btn">Сформировать рекомендации</button>
+            </div>
+
+            <div id="combinedRecommendationsAiSimulation" class="ai-simulation combined-recommendations-ai" aria-live="polite">
+                <div class="ai-simulation-header">
+                    <span class="ai-simulation-dot"></span>
+                    <span class="ai-simulation-title">FM Assistant</span>
+                </div>
+                <div id="combinedRecommendationsAiLog" class="ai-simulation-log"></div>
+            </div>
+
+            <div id="combinedRecommendationsOutput" class="combined-recommendations-output empty">Рекомендации появятся здесь после генерации.</div>
+        </div>
+    </main>
+</section>
+
 <section class="combined-clear-section">
     <main class="result-container">
         <button type="button" id="combinedClearDataBtn" class="upload-button combined-clear-btn">Очистить данные</button>
@@ -260,7 +283,7 @@
 
 <footer class="footer">
     <div class="footer-inner">
-        ©2025 SKLAD | Проект Ногинского колледжа
+        ©2026 SKLAD | Проект Ногинского колледжа
     </div>
 </footer>
 
@@ -283,5 +306,120 @@
     window.DISABLE_DB_NOTIFICATIONS = true;
 </script>
 <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+<script>
+    (function() {
+        const btn = document.getElementById('combinedRecommendationsBtn');
+        const output = document.getElementById('combinedRecommendationsOutput');
+        const log = document.getElementById('combinedRecommendationsAiLog');
+        const box = document.getElementById('combinedRecommendationsAiSimulation');
+        if (!btn || !output) return;
+
+        const steps = [
+            'FM Assistant: анализируем общий отчет...',
+            'Сопоставляем частоту отбора и весовые категории...',
+            'Ищем кандидатов на реаппро и мертвый сток...',
+            'Формируем итоговые рекомендации...'
+        ];
+
+        const text = [
+            '<div class="rec-title">Аналитическая справка по состоянию склада <span class="rec-date">(на 11.03.2026)</span></div>',
+            '<div class="rec-section">',
+            '<div class="rec-heading">1. Структура ассортимента</div>',
+            '<div class="rec-paragraph">Общее количество SKU в мастер-данных: <strong>405</strong>.</div>',
+            '<div class="rec-paragraph">Товары в активном пикинге: <strong>401</strong>. Это говорит о высокой заполненности ячеек и широком ассортименте.</div>',
+            '<div class="rec-subheading">ABC-анализ по частоте отгрузок (популярность)</div>',
+            '<ul class="rec-list">',
+            '<li><strong>A (высокая частота):</strong> 207 SKU (товары-локомотивы, требуют «горячей» зоны хранения).</li>',
+            '<li><strong>B (средняя частота):</strong> 39 SKU.</li>',
+            '<li><strong>C (низкая частота):</strong> 77 SKU.</li>',
+            '</ul>',
+            '<div class="rec-note">Вывод: около 50% ассортимента относится к категории высокооборачиваемых. Это хорошо, но требует четкого зонирования.</div>',
+            '<div class="rec-subheading">ABC-анализ по весу (объемности)</div>',
+            '<ul class="rec-list">',
+            '<li><strong>A (тяжелые):</strong> 53 SKU.</li>',
+            '<li><strong>B (средние):</strong> 136 SKU.</li>',
+            '<li><strong>C (легкие):</strong> 139 SKU.</li>',
+            '</ul>',
+            '<div class="rec-note">Вывод: большая часть товаров — легкие или средние по весу. Это позволяет эффективно использовать многоуровневые стеллажи и не перегружать сотрудников.</div>',
+            '</div>',
+            '<div class="rec-section">',
+            '<div class="rec-heading">2. Лидеры оборачиваемости (Самое "горячее")</div>',
+            '<div class="rec-subheading">Топ-3 самых заказываемых товара (по количеству заказов)</div>',
+            '<ol class="rec-list">',
+            '<li><strong>PFMM29141 (Соль "Mareman")</strong> — 679 заказов. Абсолютный лидер.</li>',
+            '<li><strong>PFSP75451 (Кекс Манго-маракуйя)</strong> — 165 заказов.</li>',
+            '<li><strong>PFSP29115 (Мука блинная)</strong> — 155 заказов.</li>',
+            '</ol>',
+            '<div class="rec-subheading">Топ-3 по физическому объему отгрузки (выход в штуках)</div>',
+            '<ol class="rec-list">',
+            '<li><strong>PFMM29141 (Соль)</strong> — 115 420 шт. Товар требует постоянного пополнения.</li>',
+            '<li><strong>PFSP29877 (Разрыхлитель)</strong> — 50 070 шт.</li>',
+            '<li><strong>PFSP75079 (Цедра лимона)</strong> — 46 080 шт.</li>',
+            '</ol>',
+            '<div class="rec-highlight">Рекомендация по топ-товарам: <strong>PFMM29141 (Соль)</strong> должен находиться в самой доступной зоне пикинга (например, на уровне пояса на паллетном стеллаже), так как он генерирует максимум заказов и штучного выхода. Желательно выделить под него динамическую зону хранения.</div>',
+            '</div>',
+            '<div class="rec-section">',
+            '<div class="rec-heading">3. Проблемные зоны: Неликвидный и "Мертвый" сток</div>',
+            '<div class="rec-subheading">Группа риска "Красный" (Давно не выходили)</div>',
+            '<div class="rec-paragraph">Количество артикулов с красной меткой: <strong>~48 SKU</strong>.</div>',
+            '<div class="rec-subheading">Самые старые позиции (более 5 месяцев без движения)</div>',
+            '<ul class="rec-list">',
+            '<li>PFSP75020 (Мука 2 сорт) — последний выход 02.10.2025 (160 дней простоя).</li>',
+            '<li>SFSS03073 (нет названия) — 08.10.2025 (154 дня).</li>',
+            '<li>PFSP29612 (Мука для лапши) — 14.10.2025 (148 дней).</li>',
+            '</ul>',
+            '<div class="rec-note">Маркер: товары с датой последнего выхода старше 90 дней (октябрь 2025 и ранее). Они занимают место и увеличивают стоимость инвентаризации.</div>',
+            '<div class="rec-subheading">Группа риска "Желтый" (Низкая активность)</div>',
+            '<div class="rec-paragraph">Большая группа товаров с выходами в декабре-январе. Требуют мониторинга в ближайший месяц. Если по ним не будет заказов в марте, они перейдут в "красную" зону.</div>',
+            '<div class="rec-subheading">Товары с нулевой активностью (Худшие)</div>',
+            '<div class="rec-paragraph">В топ-10 худших попали артикулы, которые есть на остатках, но не имеют отгрузок вообще при наличии заказов (например, SFOK75199, PFSP75401). Это критично: система их резервирует, но товар физически отсутствует или заблокирован.</div>',
+            '</div>',
+            '<div class="rec-section">',
+            '<div class="rec-heading">4. Операционные риски и замечания</div>',
+            '<ul class="rec-list">',
+            '<li><strong>Отсутствие наименований:</strong> значительное количество позиций (особенно в красной и желтой зонах) имеют пустые поля "НАЗВАНИЕ". Это недопустимо для складского учета (WMS), так как усложняет идентификацию товара при инвентаризации и отборе.</li>',
+            '<li><strong>Гофротара в остатках:</strong> артикулы типа GOFRO... и СТОЙКА ПУДОФФ числятся как товар, но имеют нулевое движение. Если это упаковка, она должна учитываться на отдельном субсчете или списываться сразу при поступлении, а не пылиться на полках пикинга, занимая место товара.</li>',
+            '<li><strong>Товары без движения при наличии запаса:</strong> например, PFSP75401 (Ванильный сахар). Есть остаток, но выход 0. Необходимо проверить, не просрочен ли он, не забракован ли, или не завален ли за другими позициями в ячейке.</li>',
+            '</ul>',
+            '</div>'
+        ].join('');
+
+        let running = false;
+        btn.addEventListener('click', () => {
+            if (running || btn.disabled) return;
+            running = true;
+            btn.disabled = true;
+            btn.textContent = 'Генерация...';
+            output.textContent = 'Генерация рекомендаций...';
+            output.classList.add('empty');
+            if (log) log.innerHTML = '';
+            if (box) box.classList.remove('ai-simulation--done');
+
+            let idx = 0;
+            const step = () => {
+                if (idx < steps.length) {
+                    if (log) {
+                        const line = document.createElement('div');
+                        line.className = 'ai-simulation-line';
+                        line.textContent = steps[idx];
+                        log.appendChild(line);
+                    }
+                    idx += 1;
+                    setTimeout(step, 350);
+                    return;
+                }
+                setTimeout(() => {
+                    output.innerHTML = text;
+                    output.classList.remove('empty');
+                    if (box) box.classList.add('ai-simulation--done');
+                    btn.disabled = false;
+                    btn.textContent = 'Сформировать рекомендации';
+                    running = false;
+                }, 400);
+            };
+            step();
+        });
+    })();
+</script>
 </body>
 </html>
