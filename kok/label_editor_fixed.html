@@ -1,0 +1,1798 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARTDECO - Редактор этикеток</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 20px;
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .panel {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .preview-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            height: 90vh;
+        }
+
+        h2 {
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 20px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        h3 {
+            margin: 15px 0 10px;
+            color: #555;
+            font-size: 16px;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .tool-btn {
+            padding: 10px 15px;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .tool-btn:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .tool-btn.primary {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .tool-btn.primary:hover {
+            background: #5a67d8;
+        }
+
+        .upload-section {
+            background: #f0f7ff;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 2px dashed #667eea;
+        }
+
+        .upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .upload-area:hover {
+            background: #f0f4ff;
+        }
+
+        .upload-area.dragover {
+            background: #e6ecfe;
+            border-color: #4c51bf;
+        }
+
+        .upload-icon {
+            font-size: 30px;
+            margin-bottom: 5px;
+            color: #667eea;
+        }
+
+        .upload-text {
+            color: #4a5568;
+            font-size: 13px;
+        }
+
+        .upload-hint {
+            font-size: 11px;
+            color: #718096;
+        }
+
+        .status-message {
+            margin-top: 10px;
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 13px;
+            display: none;
+        }
+
+        .status-message.success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+            display: block;
+        }
+
+        .status-message.error {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 1px solid #fc8181;
+            display: block;
+        }
+
+        .status-message.loading {
+            background: #e9d8fd;
+            color: #44337a;
+            border: 1px solid #d6bcfa;
+            display: block;
+        }
+
+        .elements-list {
+            margin-bottom: 20px;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .element-item {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .element-item:hover {
+            border-color: #667eea;
+            transform: translateX(5px);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+        }
+
+        .element-item.selected {
+            border-color: #667eea;
+            background: #e6ecfe;
+        }
+
+        .element-icon {
+            font-size: 18px;
+            width: 25px;
+            text-align: center;
+        }
+
+        .element-info {
+            flex: 1;
+        }
+
+        .element-title {
+            font-weight: 600;
+            font-size: 13px;
+            color: #333;
+        }
+
+        .element-preview {
+            font-size: 11px;
+            color: #666;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .element-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .element-btn {
+            width: 24px;
+            height: 24px;
+            border: 1px solid #e0e0e0;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .element-btn:hover {
+            background: #f0f0f0;
+            border-color: #667eea;
+        }
+
+        .element-btn.delete:hover {
+            background: #fee2e2;
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+
+        .canvas-container {
+            flex: 1;
+            background: #f0f0f0;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+            min-height: 500px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #canvas-viewport {
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            position: relative;
+            transform-origin: 0 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: default;
+        }
+        
+        #canvas-viewport.panning,
+        #canvas-viewport.panning * {
+            cursor: grabbing !important;
+        }
+
+        #label-canvas {
+            position: relative;
+            margin: auto;
+            background: white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transform-origin: center center;
+            will-change: transform;
+        }
+
+        /* Сетка для редактора */
+        .grid-active #label-canvas {
+            background-image: 
+                linear-gradient(to right, #e0e0e0 1px, transparent 1px),
+                linear-gradient(to bottom, #e0e0e0 1px, transparent 1px),
+                linear-gradient(to right, #667eea 1px, transparent 1px),
+                linear-gradient(to bottom, #667eea 1px, transparent 1px);
+            background-size: 20px 20px, 20px 20px, 100px 100px, 100px 100px;
+            background-position: 0 0, 0 0, 0 0, 0 0;
+            background-repeat: repeat;
+        }
+
+        .canvas-element {
+            position: absolute;
+            cursor: move;
+            border: 1px solid transparent;
+            transition: border 0.1s;
+            user-select: none;
+            padding: 0;
+            overflow: visible;
+            box-sizing: border-box;
+            will-change: left, top, width, height;
+            display: flex;
+            align-items: flex-start;
+            justify-content: flex-start;
+            z-index: 1;
+        }
+
+        .canvas-element.selected {
+            border: 1px solid #667eea;
+            box-shadow: 0 0 0 1px rgba(102, 126, 234, 0.3);
+            background: transparent;
+            z-index: 10;
+        }
+
+        .canvas-element:hover {
+            border: 1px dashed #667eea;
+        }
+
+        /* Маркеры изменения размера - минимальные */
+        .resize-handle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: #667eea;
+            border: 1px solid white;
+            border-radius: 3px;
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.2s;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            pointer-events: all;
+        }
+
+        .canvas-element.selected .resize-handle {
+            opacity: 1;
+        }
+
+        .resize-handle:hover {
+            background: #5a67d8;
+        }
+
+        .handle-nw {
+            top: -3px;
+            left: -3px;
+            cursor: nw-resize;
+        }
+
+        .handle-n {
+            top: -3px;
+            left: 50%;
+            transform: translateX(-50%);
+            cursor: n-resize;
+        }
+
+        .handle-ne {
+            top: -3px;
+            right: -3px;
+            cursor: ne-resize;
+        }
+
+        .handle-w {
+            top: 50%;
+            left: -3px;
+            transform: translateY(-50%);
+            cursor: w-resize;
+        }
+
+        .handle-e {
+            top: 50%;
+            right: -3px;
+            transform: translateY(-50%);
+            cursor: e-resize;
+        }
+
+        .handle-sw {
+            bottom: -3px;
+            left: -3px;
+            cursor: sw-resize;
+        }
+
+        .handle-s {
+            bottom: -3px;
+            left: 50%;
+            transform: translateX(-50%);
+            cursor: s-resize;
+        }
+
+        .handle-se {
+            bottom: -3px;
+            right: -3px;
+            cursor: se-resize;
+        }
+
+        .element-text {
+            font-family: 'Arial', sans-serif;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            overflow-x: hidden;
+            pointer-events: none;
+            line-height: 1.2;
+            color: #000000;
+            padding: 0;
+            margin: 0;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            word-break: break-word;
+            hyphens: auto;
+            box-sizing: border-box;
+        }
+
+        .element-text::-webkit-scrollbar {
+            display: none;
+        }
+
+        .element-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            pointer-events: none;
+        }
+
+        .element-barcode {
+            width: 100%;
+            height: 100%;
+            background: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: monospace;
+            font-size: 10px;
+            border: 1px dashed #999;
+            pointer-events: none;
+            overflow: hidden;
+            word-break: break-all;
+            padding: 0;
+        }
+
+        .zoom-controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 5px;
+            background: white;
+            padding: 8px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        .zoom-btn {
+            width: 32px;
+            height: 32px;
+            border: 1px solid #e0e0e0;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .zoom-btn:hover {
+            background: #f0f0f0;
+        }
+
+        .properties-panel {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .property-group {
+            margin-bottom: 12px;
+        }
+
+        .property-group label {
+            display: block;
+            margin-bottom: 4px;
+            font-weight: 500;
+            font-size: 12px;
+            color: #555;
+        }
+
+        .property-group input,
+        .property-group select,
+        .property-group textarea {
+            width: 100%;
+            padding: 6px 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 12px;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        .property-group input:focus,
+        .property-group select:focus,
+        .property-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .property-group input[type="checkbox"] {
+            width: auto;
+            margin-right: 5px;
+        }
+
+        .canvas-info {
+            position: absolute;
+            bottom: 80px;
+            left: 20px;
+            background: rgba(255,255,255,0.9);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #333;
+            z-index: 100;
+            pointer-events: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            font-weight: 500;
+        }
+
+        .info-message {
+            background: #f0f7ff;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #2c3e50;
+            border-left: 4px solid #667eea;
+            margin-top: 15px;
+        }
+
+        .info-message ul {
+            margin-top: 5px;
+            padding-left: 20px;
+        }
+
+        .info-message li {
+            margin-bottom: 3px;
+        }
+
+        small {
+            color: #718096;
+            font-size: 10px;
+            display: block;
+            margin-top: 3px;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        .grid-toggle {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+
+        .grid-toggle label {
+            font-size: 12px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="panel">
+            <h2>📋 Управление</h2>
+            
+            <div class="toolbar">
+                <button class="tool-btn primary" onclick="addNewElement()">➕ Текст</button>
+                <button class="tool-btn" onclick="loadJSON()">📂 Загрузить</button>
+                <button class="tool-btn" onclick="saveJSON()">💾 JSON</button>
+                <button class="tool-btn" onclick="saveAsPNG()">🖼️ PNG</button>
+            </div>
+
+            <div class="upload-section">
+                <div class="upload-area" id="json-upload-area">
+                    <div class="upload-icon">📄</div>
+                    <div class="upload-text">Нажмите или перетащите JSON</div>
+                    <div class="upload-hint">Формат ARTDECO/Kerasis</div>
+                    <input type="file" id="json-input" accept=".json" style="display: none;">
+                </div>
+                <div class="status-message" id="json-status"></div>
+            </div>
+
+            <div class="property-group" style="display: flex; gap: 10px;">
+                <div style="flex: 1;">
+                    <label>Ширина (мм)</label>
+                    <input type="number" id="canvas-width" value="58" step="0.1" min="10" max="300" onchange="updateCanvasSize()">
+                </div>
+                <div style="flex: 1;">
+                    <label>Высота (мм)</label>
+                    <input type="number" id="canvas-height" value="60" step="0.1" min="10" max="300" onchange="updateCanvasSize()">
+                </div>
+            </div>
+
+            <div class="grid-toggle">
+                <input type="checkbox" id="show-grid" checked onchange="toggleGrid()">
+                <label for="show-grid">Показать сетку (только в редакторе)</label>
+            </div>
+
+            <h3>Элементы (<span id="elements-count">0</span>)</h3>
+            <div class="elements-list" id="elements-list"></div>
+
+            <div class="properties-panel" id="properties-panel" style="display: none;">
+                <h3>⚙️ Свойства</h3>
+                <div class="property-group">
+                    <label>Тип</label>
+                    <select id="prop-type" onchange="updateSelectedProperty('type', this.value)">
+                        <option value="text">Текст</option>
+                        <option value="image">Изображение</option>
+                        <option value="barcode">Штрихкод</option>
+                    </select>
+                </div>
+                <div class="property-group" id="prop-text-group">
+                    <label>Текст</label>
+                    <textarea id="prop-text" rows="3" onchange="updateSelectedProperty('exampleData', this.value)"></textarea>
+                </div>
+                <div class="property-group">
+                    <label>X (мм)</label>
+                    <input type="number" id="prop-x" step="0.1" onchange="updateSelectedProperty('x', parseFloat(this.value))">
+                </div>
+                <div class="property-group">
+                    <label>Y (мм)</label>
+                    <input type="number" id="prop-y" step="0.1" onchange="updateSelectedProperty('y', parseFloat(this.value))">
+                </div>
+                <div class="property-group">
+                    <label>Ширина (мм)</label>
+                    <input type="number" id="prop-width" step="0.1" min="5" onchange="updateSelectedProperty('width', parseFloat(this.value))">
+                </div>
+                <div class="property-group">
+                    <label>Высота (мм)</label>
+                    <input type="number" id="prop-height" step="0.1" min="3" onchange="updateSelectedProperty('height', parseFloat(this.value))">
+                </div>
+                <div class="property-group">
+                    <label>Размер шрифта (мм)</label>
+                    <input type="number" id="prop-fontsize" step="0.1" min="1" max="20" onchange="updateSelectedProperty('fontSize', parseFloat(this.value))">
+                </div>
+                <div class="property-group">
+                    <label>Выравнивание</label>
+                    <select id="prop-align" onchange="updateSelectedProperty('align', this.value)">
+                        <option value="L">По левому краю</option>
+                        <option value="C">По центру</option>
+                        <option value="R">По правому краю</option>
+                        <option value="J">По ширине</option>
+                    </select>
+                </div>
+                <div class="property-group">
+                    <label style="display: flex; align-items: center;">
+                        <input type="checkbox" id="prop-bold" onchange="updateSelectedProperty('fontBold', this.checked)">
+                        <span style="margin-left: 5px;">Жирный</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="info-message">
+                <strong>💡 Управление:</strong> 
+                <ul>
+                    <li>Ctrl + колесо - масштаб</li>
+                    <li><strong>Перетаскивание пустой области</strong> - перемещение холста</li>
+                    <li>Клик на элемент - выбор</li>
+                    <li>Перетаскивание элемента - перемещение</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="preview-panel">
+            <h2>🖼️ Холст этикетки</h2>
+            
+            <div class="canvas-container" id="canvas-container">
+                <div id="canvas-viewport" onmousedown="startPan(event)">
+                    <div id="label-canvas" onclick="deselectElement(event)"></div>
+                </div>
+                <div class="canvas-info" id="canvas-info"></div>
+                <div class="zoom-controls">
+                    <button class="zoom-btn" onclick="zoomWithButtons('in')">+</button>
+                    <button class="zoom-btn" onclick="zoomWithButtons('out')">-</button>
+                    <button class="zoom-btn" onclick="resetView()">↺</button>
+                    <button class="zoom-btn" onclick="fitToScreen()">⤢</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script>
+        let elements = [];
+        let selectedElement = null;
+        let nextId = 1;
+        let dragState = { isDragging: false };
+        let resizeState = { 
+            isResizing: false,
+            handle: null,
+            startX: 0,
+            startY: 0,
+            startWidth: 0,
+            startHeight: 0,
+            startLeft: 0,
+            startTop: 0
+        };
+        let panState = { 
+            isPanning: false,
+            startX: 0,
+            startY: 0,
+            scrollLeft: 0,
+            scrollTop: 0
+        };
+        
+        let baseScale = 20; // 1мм = 20px
+        let viewportZoom = 1;
+
+        const fontMap = {
+            '019bc5cd-e205-72a9-89b1-6cc1d57aa440': 'Arial',
+            '019bd4e0-d700-73c1-83eb-a56869d53441': 'Arial Narrow'
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initCanvas();
+            initDragAndDrop();
+            initPanAndZoom();
+            updateCanvasInfo();
+            addLabelFromImage();
+            toggleGrid();
+        });
+
+        function deselectElement(event) {
+            // Снимаем выделение при клике на пустое место canvas
+            if (event.target === document.getElementById('label-canvas')) {
+                if (selectedElement) {
+                    const prevSelected = document.getElementById(`element-${selectedElement}`);
+                    if (prevSelected) {
+                        prevSelected.classList.remove('selected');
+                    }
+                    selectedElement = null;
+                    document.getElementById('properties-panel').style.display = 'none';
+                    updateElementsList();
+                }
+            }
+        }
+
+        function toggleGrid() {
+            const container = document.querySelector('.canvas-container');
+            const showGrid = document.getElementById('show-grid').checked;
+            
+            if (showGrid) {
+                container.classList.add('grid-active');
+            } else {
+                container.classList.remove('grid-active');
+            }
+        }
+
+        function addLabelFromImage() {
+            document.getElementById('label-canvas').innerHTML = '';
+            elements = [];
+            selectedElement = null;
+            nextId = 1;
+            
+            document.getElementById('canvas-width').value = 58;
+            document.getElementById('canvas-height').value = 60; // Исправлено с 65 на 60
+            updateCanvasSize();
+            
+            // Штрихкод вверху
+            addElement({
+                type: 'barcode',
+                exampleData: '01088010462889002',
+                x: 4,
+                y: 1.5,
+                width: 50,
+                height: 3.5,
+                fontSize: 1.8,
+                align: 'C'
+            });
+            
+            // Заголовок
+            addElement({
+                type: 'text',
+                exampleData: 'ШАМПУНЬ ДЛЯ ВОЛОС\nЭГЁН КЕРАСИС',
+                x: 4,
+                y: 6,
+                width: 50,
+                height: 5,
+                fontSize: 2.6,
+                align: 'C',
+                fontBold: true
+            });
+            
+            // Корзина
+            addElement({
+                type: 'text',
+                exampleData: 'Корзина: 1 шт.',
+                x: 4,
+                y: 11.5,
+                width: 50,
+                height: 2.2,
+                fontSize: 1.9,
+                align: 'L'
+            });
+            
+            // Парфюмированная формула
+            addElement({
+                type: 'text',
+                exampleData: 'Парфюм. формула: 10 цвет. экстрактов, 3 трав. компонента',
+                x: 4,
+                y: 14,
+                width: 50,
+                height: 3.5,
+                fontSize: 1.7,
+                align: 'L'
+            });
+            
+            // Список преимуществ
+            addElement({
+                type: 'text',
+                exampleData: '• 10 ЦВЕТОЧНЫХ ЭКСТРАКТОВ\n• 3 ТРАВЯНЫХ МАСЛА\n• АМИНОКИСЛОТЫ',
+                x: 4,
+                y: 18,
+                width: 50,
+                height: 5,
+                fontSize: 1.9,
+                align: 'L',
+                fontBold: true
+            });
+            
+            // Верхине ноты
+            addElement({
+                type: 'text',
+                exampleData: 'Верхние ноты: яблоневый цвет, ирис, персик',
+                x: 4,
+                y: 23.5,
+                width: 50,
+                height: 2.2,
+                fontSize: 1.6,
+                align: 'L',
+                fontItalic: true
+            });
+            
+            // Рекламный слоган
+            addElement({
+                type: 'text',
+                exampleData: 'Спешите почтить требования!',
+                x: 4,
+                y: 26,
+                width: 50,
+                height: 2,
+                fontSize: 1.7,
+                align: 'C',
+                fontBold: true
+            });
+            
+            // Способ применения
+            addElement({
+                type: 'text',
+                exampleData: 'Применение: нанести на влажные волосы, вспенить, смыть через 1-2 мин.',
+                x: 4,
+                y: 28.5,
+                width: 50,
+                height: 4.5,
+                fontSize: 1.5,
+                align: 'L'
+            });
+            
+            // Меры предосторожности
+            addElement({
+                type: 'text',
+                exampleData: 'Меры: только наружно. При попадании в глаза промыть водой. Хранить в недоступном для детей месте.',
+                x: 4,
+                y: 33.5,
+                width: 50,
+                height: 4,
+                fontSize: 1.4,
+                align: 'L'
+            });
+            
+            // Производитель
+            addElement({
+                type: 'text',
+                exampleData: 'Изготовитель: Aekyung Ind. Co., Ltd. (Корея)',
+                x: 4,
+                y: 38,
+                width: 50,
+                height: 2.2,
+                fontSize: 1.4,
+                align: 'L'
+            });
+            
+            // Импортер
+            addElement({
+                type: 'text',
+                exampleData: 'Импортер: ООО "ОРИЕНТ", Владивосток, ул. Комсомольская, 1, офис 119',
+                x: 4,
+                y: 40.5,
+                width: 50,
+                height: 3,
+                fontSize: 1.3,
+                align: 'L'
+            });
+            
+            // Штрихкод внизу
+            addElement({
+                type: 'barcode',
+                exampleData: '01088010462889002',
+                x: 4,
+                y: 44,
+                width: 50,
+                height: 3,
+                fontSize: 1.2,
+                align: 'C'
+            });
+            
+            updateElementsList();
+            setTimeout(() => fitToScreen(), 100);
+        }
+
+        function initCanvas() {
+            const canvas = document.getElementById('label-canvas');
+            canvas.addEventListener('dragover', (e) => e.preventDefault());
+            canvas.addEventListener('drop', handleCanvasDrop);
+            updateCanvasSize();
+        }
+
+        function initPanAndZoom() {
+            const viewport = document.getElementById('canvas-viewport');
+            
+            // Zoom with Ctrl+Wheel
+            viewport.addEventListener('wheel', (e) => {
+                if (e.ctrlKey) {
+                    e.preventDefault();
+                    
+                    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+                    const newZoom = Math.min(5, Math.max(0.5, viewportZoom * delta));
+                    
+                    const rect = viewport.getBoundingClientRect();
+                    const mouseX = e.clientX - rect.left;
+                    const mouseY = e.clientY - rect.top;
+                    
+                    const oldZoom = viewportZoom;
+                    viewportZoom = newZoom;
+                    
+                    const scaleChange = viewportZoom / oldZoom;
+                    viewport.scrollLeft = (viewport.scrollLeft + mouseX) * scaleChange - mouseX;
+                    viewport.scrollTop = (viewport.scrollTop + mouseY) * scaleChange - mouseY;
+                    
+                    applyViewportTransform();
+                }
+            });
+            
+            // Global mouse events for panning
+            document.addEventListener('mousemove', (e) => {
+                if (panState.isPanning) {
+                    e.preventDefault();
+                    
+                    const dx = e.clientX - panState.startX;
+                    const dy = e.clientY - panState.startY;
+                    
+                    const viewport = document.getElementById('canvas-viewport');
+                    viewport.scrollLeft = panState.scrollLeft - dx;
+                    viewport.scrollTop = panState.scrollTop - dy;
+                }
+            });
+            
+            document.addEventListener('mouseup', () => {
+                if (panState.isPanning) {
+                    panState.isPanning = false;
+                    const viewport = document.getElementById('canvas-viewport');
+                    viewport.classList.remove('panning');
+                }
+            });
+        }
+
+        function startPan(event) {
+            // Запускаем панорамирование только если кликнули на пустую область (viewport или canvas)
+            if (event.target === document.getElementById('canvas-viewport') || 
+                event.target === document.getElementById('label-canvas')) {
+                
+                event.preventDefault();
+                
+                const viewport = document.getElementById('canvas-viewport');
+                
+                panState.isPanning = true;
+                panState.startX = event.clientX;
+                panState.startY = event.clientY;
+                panState.scrollLeft = viewport.scrollLeft;
+                panState.scrollTop = viewport.scrollTop;
+                
+                viewport.classList.add('panning');
+            }
+        }
+
+        function applyViewportTransform() {
+            const canvas = document.getElementById('label-canvas');
+            canvas.style.transform = `scale(${viewportZoom})`;
+            updateCanvasInfo();
+        }
+
+        function zoomWithButtons(action) {
+            if (action === 'in') {
+                viewportZoom = Math.min(5, viewportZoom * 1.25);
+            } else if (action === 'out') {
+                viewportZoom = Math.max(0.5, viewportZoom * 0.8);
+            }
+            applyViewportTransform();
+        }
+
+        function resetView() {
+            viewportZoom = 1;
+            const viewport = document.getElementById('canvas-viewport');
+            viewport.scrollLeft = 0;
+            viewport.scrollTop = 0;
+            applyViewportTransform();
+        }
+
+        function fitToScreen() {
+            const viewport = document.getElementById('canvas-viewport');
+            const canvas = document.getElementById('label-canvas');
+            
+            const containerWidth = viewport.clientWidth;
+            const containerHeight = viewport.clientHeight;
+            const canvasWidth = canvas.offsetWidth;
+            const canvasHeight = canvas.offsetHeight;
+            
+            if (canvasWidth === 0 || canvasHeight === 0) return;
+            
+            const scaleX = (containerWidth - 40) / canvasWidth;
+            const scaleY = (containerHeight - 40) / canvasHeight;
+            viewportZoom = Math.min(scaleX, scaleY, 2);
+            
+            viewport.scrollLeft = (canvasWidth * viewportZoom - containerWidth) / 2;
+            viewport.scrollTop = (canvasHeight * viewportZoom - containerHeight) / 2;
+            
+            applyViewportTransform();
+        }
+
+        function initDragAndDrop() {
+            const jsonUpload = document.getElementById('json-upload-area');
+            const jsonInput = document.getElementById('json-input');
+            
+            jsonUpload.addEventListener('click', () => jsonInput.click());
+            
+            jsonUpload.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                jsonUpload.classList.add('dragover');
+            });
+            
+            jsonUpload.addEventListener('dragleave', () => {
+                jsonUpload.classList.remove('dragover');
+            });
+            
+            jsonUpload.addEventListener('drop', (e) => {
+                e.preventDefault();
+                jsonUpload.classList.remove('dragover');
+                
+                const file = e.dataTransfer.files[0];
+                if (file && file.name.endsWith('.json')) {
+                    readJSONFile(file);
+                } else {
+                    showStatus('Загрузите JSON файл', 'error');
+                }
+            });
+            
+            jsonInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) readJSONFile(file);
+            });
+        }
+
+        function readJSONFile(file) {
+            showStatus('Загрузка...', 'loading');
+            
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    
+                    document.getElementById('label-canvas').innerHTML = '';
+                    elements = [];
+                    selectedElement = null;
+                    nextId = 1; // Сброс ID
+                    
+                    if (data.templateDefinition) {
+                        loadTemplateDefinition(data.templateDefinition);
+                    } else if (data.canvas) {
+                        loadTemplateDefinition(data);
+                    } else if (Array.isArray(data)) {
+                        loadElementsArray(data);
+                    }
+                    
+                    showStatus('Загружено!', 'success');
+                    setTimeout(() => fitToScreen(), 100);
+                } catch (err) {
+                    showStatus('Ошибка: ' + err.message, 'error');
+                }
+            };
+            
+            reader.readAsText(file);
+        }
+
+        function loadTemplateDefinition(template) {
+            document.getElementById('label-canvas').innerHTML = '';
+            elements = [];
+            nextId = 1;
+            
+            // Устанавливаем размеры холста
+            if (template.canvas) {
+                document.getElementById('canvas-width').value = template.canvas.width || 58;
+                document.getElementById('canvas-height').value = template.canvas.height || 60;
+                updateCanvasSize();
+            }
+            
+            // Загружаем элементы с их исходными координатами
+            if (template.elements && Array.isArray(template.elements)) {
+                template.elements.forEach(el => {
+                    // Создаем элемент с точными координатами из файла
+                    const element = {
+                        type: el.type || 'text',
+                        exampleData: el.exampleData || el.text || '',
+                        x: parseFloat(el.x) || 4,
+                        y: parseFloat(el.y) || 4,
+                        width: parseFloat(el.width) || 40,
+                        height: parseFloat(el.height) || 6,
+                        fontSize: parseFloat(el.fontSize) || 2.0,
+                        align: el.align || 'L',
+                        fontBold: el.fontBold || false,
+                        fontItalic: el.fontItalic || false,
+                        imageData: el.imageData || '',
+                        barcodeType: el.barcodeType || 'gs1-datamatrix',
+                        fontId: el.fontId || ''
+                    };
+                    
+                    addElement(element);
+                });
+            }
+            
+            updateElementsList();
+        }
+
+        function loadElementsArray(elementsArray) {
+            document.getElementById('label-canvas').innerHTML = '';
+            elements = [];
+            nextId = 1;
+            
+            elementsArray.forEach(el => {
+                const element = {
+                    type: el.type || 'text',
+                    exampleData: el.exampleData || el.text || '',
+                    x: parseFloat(el.x) || 4,
+                    y: parseFloat(el.y) || 4,
+                    width: parseFloat(el.width) || 40,
+                    height: parseFloat(el.height) || 6,
+                    fontSize: parseFloat(el.fontSize) || 2.0,
+                    align: el.align || 'L',
+                    fontBold: el.fontBold || false,
+                    fontItalic: el.fontItalic || false,
+                    imageData: el.imageData || '',
+                    barcodeType: el.barcodeType || 'gs1-datamatrix',
+                    fontId: el.fontId || ''
+                };
+                
+                addElement(element);
+            });
+            
+            updateElementsList();
+        }
+
+        function addElement(props = {}) {
+            let text = props.exampleData || props.text || '';
+            
+            const element = {
+                id: nextId++,
+                type: props.type || 'text',
+                x: parseFloat(props.x) || 4,
+                y: parseFloat(props.y) || 4,
+                width: parseFloat(props.width) || 40,
+                height: parseFloat(props.height) || 6,
+                fontSize: parseFloat(props.fontSize) || 2.0,
+                align: props.align || 'L',
+                fontBold: props.fontBold || false,
+                fontItalic: props.fontItalic || false,
+                code: props.code || '',
+                isStatic: props.isStatic || false,
+                exampleData: text,
+                imageData: props.imageData || '',
+                barcodeType: props.barcodeType || 'gs1-datamatrix',
+                fontId: props.fontId || ''
+            };
+            
+            elements.push(element);
+            renderElement(element);
+            
+            return element;
+        }
+
+        function renderElement(element) {
+            const canvas = document.getElementById('label-canvas');
+            
+            const div = document.createElement('div');
+            div.id = `element-${element.id}`;
+            div.className = `canvas-element`;
+            
+            div.style.left = (element.x * baseScale) + 'px';
+            div.style.top = (element.y * baseScale) + 'px';
+            div.style.width = (element.width * baseScale) + 'px';
+            div.style.height = (element.height * baseScale) + 'px';
+            
+            let content = '';
+            
+            switch(element.type) {
+                case 'text':
+                    const fontFamily = fontMap[element.fontId] || 'Arial';
+                    const fontWeight = element.fontBold ? 'bold' : 'normal';
+                    const fontStyle = element.fontItalic ? 'italic' : 'normal';
+                    const textAlign = element.align === 'L' ? 'left' : 
+                                     element.align === 'C' ? 'center' : 
+                                     element.align === 'R' ? 'right' : 'justify';
+                    
+                    const formattedText = (element.exampleData || '').replace(/\n/g, '<br>');
+                    
+                    content = `<div class="element-text" style="
+                        font-size: ${element.fontSize * baseScale}px;
+                        font-family: ${fontFamily};
+                        font-weight: ${fontWeight};
+                        font-style: ${fontStyle};
+                        text-align: ${textAlign};
+                        line-height: 1.2;
+                        word-break: break-word;
+                        overflow-wrap: break-word;
+                        hyphens: auto;
+                        padding: 0;
+                        margin: 0;
+                    ">${formattedText || '&nbsp;'}</div>`;
+                    break;
+                    
+                case 'image':
+                    content = `<img class="element-image" src="${element.imageData || ''}" alt="image">`;
+                    break;
+                    
+                case 'barcode':
+                    content = `<div class="element-barcode" style="padding: 0;">📊 ${element.exampleData || ''}</div>`;
+                    break;
+                    
+                default:
+                    content = `<div class="element-text">${element.exampleData || ''}</div>`;
+            }
+            
+            // Добавляем 8 маркеров изменения размера (минимальные)
+            const handles = `
+                <div class="resize-handle handle-nw" data-handle="nw"></div>
+                <div class="resize-handle handle-n" data-handle="n"></div>
+                <div class="resize-handle handle-ne" data-handle="ne"></div>
+                <div class="resize-handle handle-w" data-handle="w"></div>
+                <div class="resize-handle handle-e" data-handle="e"></div>
+                <div class="resize-handle handle-sw" data-handle="sw"></div>
+                <div class="resize-handle handle-s" data-handle="s"></div>
+                <div class="resize-handle handle-se" data-handle="se"></div>
+            `;
+            
+            div.innerHTML = content + handles;
+            
+            div.addEventListener('mousedown', (e) => {
+                e.stopPropagation(); // Останавливаем всплытие, чтобы не активировать pan
+                e.preventDefault();
+                
+                // Сначала выделяем элемент
+                selectElement(element.id);
+                
+                // Если кликнули на маркер, начинаем ресайз
+                if (e.target.classList.contains('resize-handle')) {
+                    startResize(e, element.id, e.target.dataset.handle);
+                } else {
+                    // Иначе начинаем перетаскивание элемента
+                    startDrag(e, element.id);
+                }
+            });
+            
+            div.addEventListener('dblclick', (e) => {
+                e.stopPropagation();
+                selectElement(element.id);
+            });
+            
+            canvas.appendChild(div);
+            
+            // Если этот элемент должен быть выбран
+            if (selectedElement === element.id) {
+                div.classList.add('selected');
+            }
+        }
+
+        function startDrag(event, elementId) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            // Если идет панорамирование - отменяем
+            if (panState.isPanning) return;
+            
+            const element = elements.find(el => el.id === elementId);
+            if (!element) return;
+            
+            const canvas = document.getElementById('label-canvas');
+            const canvasRect = canvas.getBoundingClientRect();
+            
+            dragState = {
+                isDragging: true,
+                elementId: elementId,
+                startX: event.clientX,
+                startY: event.clientY,
+                offsetX: event.clientX - canvasRect.left - (element.x * baseScale),
+                offsetY: event.clientY - canvasRect.top - (element.y * baseScale)
+            };
+            
+            document.addEventListener('mousemove', onDragMove);
+            document.addEventListener('mouseup', onDragEnd);
+        }
+
+        function onDragMove(e) {
+            if (!dragState.isDragging) return;
+            
+            e.preventDefault();
+            
+            const element = elements.find(el => el.id === dragState.elementId);
+            if (!element) return;
+            
+            const canvas = document.getElementById('label-canvas');
+            const canvasRect = canvas.getBoundingClientRect();
+            
+            const newX = (e.clientX - canvasRect.left - dragState.offsetX) / baseScale;
+            const newY = (e.clientY - canvasRect.top - dragState.offsetY) / baseScale;
+            
+            const maxX = (canvas.offsetWidth / baseScale) - element.width;
+            const maxY = (canvas.offsetHeight / baseScale) - element.height;
+            
+            element.x = Math.max(0, Math.min(newX, maxX));
+            element.y = Math.max(0, Math.min(newY, maxY));
+            
+            const div = document.getElementById(`element-${dragState.elementId}`);
+            if (div) {
+                div.style.left = (element.x * baseScale) + 'px';
+                div.style.top = (element.y * baseScale) + 'px';
+            }
+            
+            updatePropertiesPanel();
+        }
+
+        function onDragEnd() {
+            if (dragState.isDragging) {
+                dragState.isDragging = false;
+                document.removeEventListener('mousemove', onDragMove);
+                document.removeEventListener('mouseup', onDragEnd);
+                updateElementsList();
+            }
+        }
+
+        function startResize(event, elementId, handle) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            // Если идет панорамирование - отменяем
+            if (panState.isPanning) return;
+            
+            const element = elements.find(el => el.id === elementId);
+            if (!element) return;
+            
+            resizeState = {
+                isResizing: true,
+                elementId: elementId,
+                handle: handle,
+                startX: event.clientX,
+                startY: event.clientY,
+                startWidth: element.width,
+                startHeight: element.height,
+                startLeft: element.x,
+                startTop: element.y
+            };
+            
+            document.addEventListener('mousemove', onResizeMove);
+            document.addEventListener('mouseup', onResizeEnd);
+        }
+
+        function onResizeMove(e) {
+            if (!resizeState.isResizing) return;
+            
+            e.preventDefault();
+            
+            const element = elements.find(el => el.id === resizeState.elementId);
+            if (!element) return;
+            
+            const canvas = document.getElementById('label-canvas');
+            const canvasWidth = canvas.offsetWidth / baseScale;
+            const canvasHeight = canvas.offsetHeight / baseScale;
+            
+            const dx = (e.clientX - resizeState.startX) / baseScale;
+            const dy = (e.clientY - resizeState.startY) / baseScale;
+            
+            let newWidth = resizeState.startWidth;
+            let newHeight = resizeState.startHeight;
+            let newX = resizeState.startLeft;
+            let newY = resizeState.startTop;
+            
+            const minSize = 5;
+            
+            switch(resizeState.handle) {
+                case 'se':
+                    newWidth = Math.max(minSize, resizeState.startWidth + dx);
+                    newHeight = Math.max(minSize, resizeState.startHeight + dy);
+                    break;
+                case 'sw':
+                    newWidth = Math.max(minSize, resizeState.startWidth - dx);
+                    newHeight = Math.max(minSize, resizeState.startHeight + dy);
+                    newX = resizeState.startLeft + (resizeState.startWidth - newWidth);
+                    break;
+                case 'ne':
+                    newWidth = Math.max(minSize, resizeState.startWidth + dx);
+                    newHeight = Math.max(minSize, resizeState.startHeight - dy);
+                    newY = resizeState.startTop + (resizeState.startHeight - newHeight);
+                    break;
+                case 'nw':
+                    newWidth = Math.max(minSize, resizeState.startWidth - dx);
+                    newHeight = Math.max(minSize, resizeState.startHeight - dy);
+                    newX = resizeState.startLeft + (resizeState.startWidth - newWidth);
+                    newY = resizeState.startTop + (resizeState.startHeight - newHeight);
+                    break;
+                case 'n':
+                    newHeight = Math.max(minSize, resizeState.startHeight - dy);
+                    newY = resizeState.startTop + (resizeState.startHeight - newHeight);
+                    break;
+                case 's':
+                    newHeight = Math.max(minSize, resizeState.startHeight + dy);
+                    break;
+                case 'w':
+                    newWidth = Math.max(minSize, resizeState.startWidth - dx);
+                    newX = resizeState.startLeft + (resizeState.startWidth - newWidth);
+                    break;
+                case 'e':
+                    newWidth = Math.max(minSize, resizeState.startWidth + dx);
+                    break;
+            }
+            
+            // Ограничиваем границами канваса
+            if (newX < 0) {
+                newWidth += newX;
+                newX = 0;
+            }
+            if (newY < 0) {
+                newHeight += newY;
+                newY = 0;
+            }
+            if (newX + newWidth > canvasWidth) {
+                newWidth = canvasWidth - newX;
+            }
+            if (newY + newHeight > canvasHeight) {
+                newHeight = canvasHeight - newY;
+            }
+            
+            newWidth = Math.max(minSize, Math.min(newWidth, canvasWidth - newX));
+            newHeight = Math.max(minSize, Math.min(newHeight, canvasHeight - newY));
+            
+            element.x = newX;
+            element.y = newY;
+            element.width = newWidth;
+            element.height = newHeight;
+            
+            const div = document.getElementById(`element-${resizeState.elementId}`);
+            if (div) {
+                div.style.left = (element.x * baseScale) + 'px';
+                div.style.top = (element.y * baseScale) + 'px';
+                div.style.width = (element.width * baseScale) + 'px';
+                div.style.height = (element.height * baseScale) + 'px';
+            }
+            
+            updatePropertiesPanel();
+        }
+
+        function onResizeEnd() {
+            if (resizeState.isResizing) {
+                resizeState.isResizing = false;
+                document.removeEventListener('mousemove', onResizeMove);
+                document.removeEventListener('mouseup', onResizeEnd);
+                updateElementsList();
+            }
+        }
+
+        function selectElement(elementId) {
+            // Снимаем выделение с предыдущего элемента
+            if (selectedElement) {
+                const prevSelected = document.getElementById(`element-${selectedElement}`);
+                if (prevSelected) {
+                    prevSelected.classList.remove('selected');
+                }
+            }
+            
+            // Устанавливаем новый выделенный элемент
+            selectedElement = elementId;
+            
+            const selectedDiv = document.getElementById(`element-${elementId}`);
+            if (selectedDiv) {
+                selectedDiv.classList.add('selected');
+            }
+            
+            updatePropertiesPanel();
+            updateElementsList();
+        }
+
+        function updatePropertiesPanel() {
+            const panel = document.getElementById('properties-panel');
+            
+            if (!selectedElement) {
+                panel.style.display = 'none';
+                return;
+            }
+            
+            const element = elements.find(el => el.id === selectedElement);
+            if (!element) return;
+            
+            panel.style.display = 'block';
+            
+            document.getElementById('prop-type').value = element.type || 'text';
+            document.getElementById('prop-x').value = element.x.toFixed(1);
+            document.getElementById('prop-y').value = element.y.toFixed(1);
+            document.getElementById('prop-width').value = element.width.toFixed(1);
+            document.getElementById('prop-height').value = element.height.toFixed(1);
+            document.getElementById('prop-fontsize').value = (element.fontSize || 2).toFixed(1);
+            document.getElementById('prop-align').value = element.align || 'L';
+            document.getElementById('prop-bold').checked = element.fontBold || false;
+            
+            const textGroup = document.getElementById('prop-text-group');
+            if (element.type === 'text') {
+                textGroup.style.display = 'block';
+                document.getElementById('prop-text').value = element.exampleData || '';
+            } else {
+                textGroup.style.display = 'none';
+            }
+        }
+
+        function updateSelectedProperty(prop, value) {
+            if (!selectedElement) return;
+            
+            const element = elements.find(el => el.id === selectedElement);
+            if (!element) return;
+            
+            element[prop] = value;
+            
+            const oldDiv = document.getElementById(`element-${selectedElement}`);
+            if (oldDiv) oldDiv.remove();
+            
+            renderElement(element);
+            selectElement(selectedElement);
+        }
+
+        function deleteElement(elementId) {
+            elements = elements.filter(el => el.id !== elementId);
+            
+            const div = document.getElementById(`element-${elementId}`);
+            if (div) div.remove();
+            
+            if (selectedElement === elementId) {
+                selectedElement = null;
+                document.getElementById('properties-panel').style.display = 'none';
+            }
+            
+            updateElementsList();
+        }
+
+        function updateElementsList() {
+            const list = document.getElementById('elements-list');
+            list.innerHTML = '';
+            
+            elements.forEach(el => {
+                const div = document.createElement('div');
+                div.className = `element-item ${selectedElement === el.id ? 'selected' : ''}`;
+                div.onclick = () => selectElement(el.id);
+                
+                const icon = el.type === 'text' ? '📄' : el.type === 'image' ? '🖼️' : '📊';
+                const preview = el.type === 'text' ? (el.exampleData || '').substring(0, 25) : `${el.type}`;
+                
+                div.innerHTML = `
+                    <span class="element-icon">${icon}</span>
+                    <div class="element-info">
+                        <div class="element-title">${el.type} #${el.id}</div>
+                        <div class="element-preview">${preview}</div>
+                    </div>
+                    <div class="element-actions">
+                        <button class="element-btn delete" onclick="event.stopPropagation(); deleteElement(${el.id})">🗑️</button>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+            
+            document.getElementById('elements-count').textContent = elements.length;
+        }
+
+        function addNewElement() {
+            addElement({
+                type: 'text',
+                exampleData: 'Новый текст',
+                x: 10,
+                y: 10,
+                width: 40,
+                height: 6,
+                fontSize: 2.0
+            });
+            updateElementsList();
+        }
+
+        function updateCanvasSize() {
+            const canvas = document.getElementById('label-canvas');
+            const width = parseFloat(document.getElementById('canvas-width').value) * baseScale;
+            const height = parseFloat(document.getElementById('canvas-height').value) * baseScale;
+            
+            canvas.style.width = width + 'px';
+            canvas.style.height = height + 'px';
+            
+            updateCanvasInfo();
+            rerenderAllElements();
+        }
+
+        function updateCanvasInfo() {
+            const info = document.getElementById('canvas-info');
+            const width = document.getElementById('canvas-width').value;
+            const height = document.getElementById('canvas-height').value;
+            info.textContent = `${width}×${height} мм • ${elements.length} эл. • ${Math.round(viewportZoom * 100)}%`;
+        }
+
+        function rerenderAllElements() {
+            const canvas = document.getElementById('label-canvas');
+            canvas.innerHTML = '';
+            
+            elements.forEach(el => {
+                renderElement(el);
+            });
+            
+            if (selectedElement) {
+                const selectedDiv = document.getElementById(`element-${selectedElement}`);
+                if (selectedDiv) {
+                    selectedDiv.classList.add('selected');
+                }
+            }
+        }
+
+        function saveJSON() {
+            const templateDefinition = {
+                canvas: {
+                    width: parseFloat(document.getElementById('canvas-width').value),
+                    height: parseFloat(document.getElementById('canvas-height').value)
+                },
+                elements: elements.map(el => ({
+                    id: `element_${Date.now()}_${el.id}`,
+                    x: Math.round(el.x * 10) / 10,
+                    y: Math.round(el.y * 10) / 10,
+                    type: el.type,
+                    align: el.align || "L",
+                    width: Math.round(el.width * 10) / 10,
+                    height: Math.round(el.height * 10) / 10,
+                    fontBold: el.fontBold || false,
+                    fontSize: Math.round((el.fontSize || 2) * 10) / 10,
+                    exampleData: el.exampleData || "",
+                    imageData: el.imageData || "",
+                    barcodeType: el.barcodeType || "gs1-datamatrix"
+                }))
+            };
+            
+            const data = {
+                name: `Label_${Date.now()}`,
+                code: `code_${Date.now()}`,
+                templateDefinition: templateDefinition
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `label_${Date.now()}.json`;
+            a.click();
+            
+            showStatus('JSON сохранен', 'success');
+        }
+
+        async function saveAsPNG() {
+            showStatus('Создание PNG...', 'loading');
+            
+            const canvas = document.getElementById('label-canvas');
+            const container = document.querySelector('.canvas-container');
+            
+            try {
+                const hadGrid = container.classList.contains('grid-active');
+                if (hadGrid) {
+                    container.classList.remove('grid-active');
+                }
+                
+                const originalTransform = canvas.style.transform;
+                
+                canvas.style.transform = 'scale(1)';
+                
+                const pngCanvas = await html2canvas(canvas, {
+                    scale: 4,
+                    backgroundColor: '#ffffff',
+                    logging: false,
+                    allowTaint: false,
+                    useCORS: true,
+                    windowWidth: canvas.offsetWidth,
+                    windowHeight: canvas.offsetHeight,
+                    onclone: (clonedDoc) => {
+                        const clonedCanvas = clonedDoc.getElementById('label-canvas');
+                        if (clonedCanvas) {
+                            clonedCanvas.style.backgroundImage = 'none';
+                            
+                            const elements = clonedCanvas.querySelectorAll('.canvas-element');
+                            elements.forEach(el => {
+                                el.style.border = 'none';
+                                el.style.boxShadow = 'none';
+                                el.style.background = 'transparent';
+                                
+                                const handles = el.querySelectorAll('.resize-handle');
+                                handles.forEach(h => h.style.display = 'none');
+                            });
+                        }
+                    }
+                });
+                
+                canvas.style.transform = originalTransform;
+                
+                if (hadGrid) {
+                    container.classList.add('grid-active');
+                }
+                
+                const link = document.createElement('a');
+                link.download = `label_${Date.now()}.png`;
+                link.href = pngCanvas.toDataURL('image/png');
+                link.click();
+                
+                showStatus('PNG сохранен', 'success');
+            } catch (err) {
+                console.error('PNG error:', err);
+                showStatus('Ошибка создания PNG', 'error');
+            }
+        }
+
+        function loadJSON() {
+            document.getElementById('json-input').click();
+        }
+
+        function handleCanvasDrop(event) {
+            event.preventDefault();
+        }
+
+        function showStatus(message, type) {
+            const status = document.getElementById('json-status');
+            status.className = 'status-message ' + type;
+            status.textContent = message;
+            status.style.display = 'block';
+            
+            setTimeout(() => {
+                status.style.display = 'none';
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

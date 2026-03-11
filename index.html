@@ -1,0 +1,1600 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LabelFlow AI v2.0 - Автоматический дизайн этикеток</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --surface: #ffffff;
+            --surface-alt: #f8fafc;
+            --border: #e2e8f0;
+            --text: #0f172a;
+            --text-light: #64748b;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --radius: 12px;
+            --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--surface-alt);
+            color: var(--text);
+            line-height: 1.5;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+            padding: 20px;
+            gap: 20px;
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        .input-panel {
+            flex: 0 0 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .panel-header h2 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .badge {
+            background: var(--primary);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .input-container {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .input-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .input-header h3 {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-light);
+        }
+
+        .input-stats {
+            font-size: 12px;
+            color: var(--text-light);
+            background: var(--surface-alt);
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        #ai-input {
+            width: 100%;
+            min-height: 200px;
+            padding: 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--surface);
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: vertical;
+            margin-bottom: 16px;
+        }
+
+        #ai-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .input-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            grid-column: span 2;
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-secondary {
+            background: var(--surface-alt);
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--primary);
+        }
+
+        .history-templates {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .history-templates h4 {
+            font-size: 14px;
+            color: var(--text-light);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .template-item {
+            padding: 12px 16px;
+            background: var(--surface-alt);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 10px;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .template-item:hover {
+            border-color: var(--primary);
+            transform: translateY(-1px);
+        }
+
+        .template-product {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .template-size {
+            font-size: 11px;
+            color: var(--primary);
+            background: rgba(37, 99, 235, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        .preview-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .preview-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .preview-header h2 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .selected-info {
+            font-size: 13px;
+            color: var(--text-light);
+        }
+
+        .label-variants {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+            gap: 20px;
+            height: calc(100vh - 180px);
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .label-variant {
+            background: var(--surface);
+            border: 2px solid transparent;
+            border-radius: var(--radius);
+            padding: 24px;
+            transition: all 0.2s;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .label-variant:hover {
+            border-color: var(--border);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .label-variant.selected {
+            border-color: var(--primary);
+        }
+
+        .variant-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .variant-info h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .variant-size {
+            font-size: 13px;
+            color: var(--primary);
+            background: rgba(37, 99, 235, 0.1);
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+
+        .variant-features {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .feature-tag {
+            font-size: 11px;
+            padding: 3px 8px;
+            background: var(--surface-alt);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-light);
+        }
+
+        .preview-container {
+            flex: 1;
+            min-height: 340px;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border);
+            padding: 16px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .preview-container:hover .preview-overlay {
+            opacity: 1;
+        }
+
+        .preview-container:hover img {
+            transform: scale(1.02);
+        }
+
+        .preview-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: white;
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+        }
+
+        .preview-overlay i {
+            font-size: 32px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .preview-overlay span {
+            font-size: 14px;
+            font-weight: 500;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        .preview-container img {
+            max-width: 100%;
+            max-height: 340px;
+            object-fit: contain;
+            transition: transform 0.3s ease;
+        }
+
+        .variant-stats {
+            display: flex;
+            gap: 16px;
+            font-size: 12px;
+            color: var(--text-light);
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .select-btn {
+            padding: 12px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            margin-top: auto;
+        }
+
+        .select-btn:hover {
+            background: var(--primary-dark);
+        }
+
+        .details-panel {
+            flex: 0 0 340px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .details-section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+        }
+
+        .details-section h3 {
+            font-size: 14px;
+            color: var(--text-light);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #label-size-select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 16px;
+            background: white;
+            cursor: pointer;
+        }
+
+        .dimension-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .layout-settings {
+            margin-top: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .layout-row label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-light);
+            margin-bottom: 6px;
+        }
+        .layout-row select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 13px;
+            background: white;
+        }
+        .symbol-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+            font-size: 13px;
+        }
+        .symbol-item {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            align-items: center;
+        }
+        .symbol-grid label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text);
+        }
+        .symbol-pos-select {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 12px;
+            background: white;
+        }
+
+        .dimension-input label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-light);
+            margin-bottom: 6px;
+        }
+
+        .dimension-input input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
+            text-align: center;
+            background: #f5f5f5;
+        }
+        
+        .layout-row input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--surface-alt);
+            outline: none;
+            -webkit-appearance: none;
+            margin-top: 8px;
+        }
+        
+        .layout-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .layout-row input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .layout-row label span {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .optimization-progress {
+            margin-top: 16px;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 12px;
+            color: var(--text-light);
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: var(--surface-alt);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), #3b82f6);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+
+        .parsed-data {
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 12px;
+            background: var(--surface-alt);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 10px;
+            margin-top: 10px;
+        }
+
+        .parsed-item {
+            display: flex;
+            margin-bottom: 6px;
+        }
+
+        .parsed-key {
+            font-weight: 500;
+            min-width: 100px;
+            color: var(--text-light);
+        }
+
+        .parsed-value {
+            color: var(--text);
+        }
+
+        .qr-section {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        #qr-code {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        .export-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .export-btn {
+            padding: 12px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .export-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .export-btn.primary {
+            grid-column: span 2;
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .export-btn.primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .app-footer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 16px 24px;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .footer-info {
+            font-size: 13px;
+            color: var(--text-light);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #10b981;
+        }
+
+        .status-dot.warning {
+            background: var(--warning);
+        }
+
+        .tab-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .tab-btn {
+            padding: 8px 12px;
+            background: var(--surface-alt);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .enhanced-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease;
+        }
+
+        .enhanced-modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .enhanced-modal-content {
+            background: var(--surface);
+            border-radius: 10px;
+            width: 98vw;
+            height: 97vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+        }
+
+        .enhanced-modal.active .enhanced-modal-content {
+            transform: scale(1);
+        }
+
+        .enhanced-modal-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .enhanced-modal-close {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--surface-alt);
+            border: 1px solid var(--border);
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .enhanced-modal-close:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .enhanced-modal-body {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            overflow: auto;
+            background: #f8fafc;
+        }
+
+        .enhanced-modal-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            transform-origin: center center;
+            transition: transform 0.08s linear;
+            user-select: none;
+        }
+
+        .enhanced-modal-actions {
+            padding: 12px 24px 16px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="input-panel">
+            <div class="panel-header">
+                <h2>LabelFlow AI</h2>
+                <span class="badge">v2.0</span>
+            </div>
+
+            <div class="input-container">
+                <div class="input-header">
+                    <h3>Опишите товар</h3>
+                    <span class="input-stats" id="input-stats">0 символов</span>
+                </div>
+                
+                <textarea id="ai-input" placeholder="Вставьте текст товара сюда"></textarea>
+                
+                <div class="tab-buttons">
+                    <button class="tab-btn active" onclick="app.switchTab('input')">Ввод</button>
+                    <button class="tab-btn" onclick="app.switchTab('parsed')">Распознано</button>
+                </div>
+                
+                <div id="parsed-tab" class="tab-content">
+                    <div class="parsed-data" id="parsed-display">
+                        Нажмите "Распознать" для анализа текста
+                    </div>
+                </div>
+                
+                <div class="input-actions">
+                    <button class="btn btn-secondary" onclick="app.parseText()">
+                        <i class="fas fa-search"></i> Распознать
+                    </button>
+                    <button class="btn btn-secondary" onclick="app.clearInput()">
+                        <i class="fas fa-trash"></i> Очистить
+                    </button>
+                    <button class="btn btn-primary" onclick="app.generate()">
+                        <i class="fas fa-magic"></i> Создать этикетку
+                    </button>
+                </div>
+            </div>
+
+            <div class="history-templates">
+                <h4><i class="fas fa-history"></i> Шаблоны</h4>
+                
+                <div class="template-item" onclick="app.loadTemplate('juice')">
+                    <div class="template-product">Апельсиновый сок 200 мл</div>
+                    <div style="font-size: 12px;">Состав, страна</div>
+                    <div class="template-size">46x46 мм</div>
+                </div>
+                
+                <div class="template-item" onclick="app.loadTemplate('cream')">
+                    <div class="template-product">Крем для лица 50 мл</div>
+                    <div style="font-size: 12px;">Состав, применение</div>
+                    <div class="template-size">40x20 мм</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="preview-panel">
+            <div class="preview-header">
+                <h2>Предпросмотр этикетки</h2>
+                <div class="selected-info" id="selected-info">
+                    Размер: <strong>46x46 мм</strong>
+                </div>
+            </div>
+
+            <div class="label-variants" id="label-variants">
+                <div class="label-variant selected" style="justify-content: center; align-items: center;">
+                    <i class="fas fa-arrow-left" style="font-size: 24px; color: var(--text-light);"></i>
+                    <p style="color: var(--text-light);">Введите текст и нажмите "Создать этикетку"</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="details-panel">
+            <div class="details-section">
+                <h3>Размер этикетки</h3>
+                
+                <select id="label-size-select" onchange="app.changeSize(this.value)">
+                    <option value="46x46">46x46 мм (552x552 px)</option>
+                    <option value="40x20">40x20 мм (480x240 px)</option>
+                    <option value="30x15">30x15 мм (360x180 px)</option>
+                </select>
+
+                <div class="dimension-inputs">
+                    <div class="dimension-input">
+                        <label>Ширина (мм)</label>
+                        <input type="text" id="width-mm" value="46" readonly>
+                    </div>
+                    <div class="dimension-input">
+                        <label>Высота (мм)</label>
+                        <input type="text" id="height-mm" value="46" readonly>
+                    </div>
+                </div>
+                
+                <div class="dimension-inputs">
+                    <div class="dimension-input">
+                        <label>Ширина (px)</label>
+                        <input type="text" id="width-px" value="552" readonly>
+                    </div>
+                    <div class="dimension-input">
+                        <label>Высота (px)</label>
+                        <input type="text" id="height-px" value="552" readonly>
+                    </div>
+                </div>
+
+                <div class="layout-settings">
+                    <div class="layout-row">
+                        <label for="qr-position-select">Позиция QR</label>
+                        <select id="qr-position-select">
+                            <option value="auto">Авто</option>
+                            <option value="top_left">Сверху слева</option>
+                            <option value="top_right">Сверху справа</option>
+                            <option value="bottom_left">Снизу слева</option>
+                            <option value="bottom_right">Снизу справа</option>
+                        </select>
+                    </div>
+                    <div class="layout-row">
+                        <label for="symbols-position-select">Позиция символов</label>
+                        <select id="symbols-position-select">
+                            <option value="auto">Авто</option>
+                            <option value="top_left">Сверху слева</option>
+                            <option value="top_right">Сверху справа</option>
+                            <option value="bottom_left">Снизу слева</option>
+                            <option value="bottom_center">Снизу по центру</option>
+                            <option value="bottom_right">Снизу справа</option>
+                        </select>
+                    </div>
+                    <div class="layout-row">
+                        <label for="title-size-slider">Размер заголовка: <span id="title-size-value">3.5</span>x</label>
+                        <input type="range" id="title-size-slider" min="1.5" max="6.0" step="0.1" value="3.5" 
+                               oninput="document.getElementById('title-size-value').textContent = this.value; app.scheduleRealtimeGenerate();">
+                    </div>
+                    <div class="layout-row">
+                        <label for="text-size-slider">Размер текста: <span id="text-size-value">1.0</span>x</label>
+                        <input type="range" id="text-size-slider" min="0.5" max="2.5" step="0.1" value="1.0"
+                               oninput="document.getElementById('text-size-value').textContent = this.value; app.scheduleRealtimeGenerate();">
+                    </div>
+                    <div class="layout-row">
+                        <label>Графические символы</label>
+                        <div class="symbol-grid">
+                            <div class="symbol-item">
+                                <label><input type="checkbox" id="symbol-eac" checked> EAC</label>
+                                <select id="symbol-eac-position" class="symbol-pos-select">
+                                    <option value="auto">Позиция: авто</option>
+                                    <option value="top_left">Сверху слева</option>
+                                    <option value="top_right">Сверху справа</option>
+                                    <option value="bottom_left">Снизу слева</option>
+                                    <option value="bottom_center">Снизу центр</option>
+                                    <option value="bottom_right">Снизу справа</option>
+                                </select>
+                            </div>
+                            <div class="symbol-item">
+                                <label><input type="checkbox" id="symbol-glass"> Бокал/вилка</label>
+                                <select id="symbol-glass-position" class="symbol-pos-select">
+                                    <option value="auto">Позиция: авто</option>
+                                    <option value="top_left">Сверху слева</option>
+                                    <option value="top_right">Сверху справа</option>
+                                    <option value="bottom_left">Снизу слева</option>
+                                    <option value="bottom_center">Снизу центр</option>
+                                    <option value="bottom_right">Снизу справа</option>
+                                </select>
+                            </div>
+                            <div class="symbol-item">
+                                <label><input type="checkbox" id="symbol-pp5"> PP5</label>
+                                <select id="symbol-pp5-position" class="symbol-pos-select">
+                                    <option value="auto">Позиция: авто</option>
+                                    <option value="top_left">Сверху слева</option>
+                                    <option value="top_right">Сверху справа</option>
+                                    <option value="bottom_left">Снизу слева</option>
+                                    <option value="bottom_center">Снизу центр</option>
+                                    <option value="bottom_right">Снизу справа</option>
+                                </select>
+                            </div>
+                            <div class="symbol-item">
+                                <label><input type="checkbox" id="symbol-pet1"> PET1</label>
+                                <select id="symbol-pet1-position" class="symbol-pos-select">
+                                    <option value="auto">Позиция: авто</option>
+                                    <option value="top_left">Сверху слева</option>
+                                    <option value="top_right">Сверху справа</option>
+                                    <option value="bottom_left">Снизу слева</option>
+                                    <option value="bottom_center">Снизу центр</option>
+                                    <option value="bottom_right">Снизу справа</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="details-section">
+                <h3>Экспорт</h3>
+                <div class="export-buttons">
+                    <button class="export-btn" onclick="app.downloadCurrent()">
+                        <i class="fas fa-file-image"></i> Скачать PNG (HD)
+                    </button>
+                    <button class="export-btn" onclick="app.downloadSvg()">
+                        <i class="fas fa-bezier-curve"></i> Скачать SVG
+                    </button>
+                    <button class="export-btn primary" onclick="app.printLabel()">
+                        <i class="fas fa-print"></i> Печать
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-footer">
+        <div class="footer-info">
+            <div class="status">
+                <div class="status-dot" id="status-dot"></div>
+                <span id="status-text">Подключено...</span>
+            </div>
+            <div id="product-info">Товар: не выбран</div>
+        </div>
+    </div>
+
+    <script>
+class LabelFlowApp {
+    constructor() {
+        this.selectedSize = '46x46';
+        this.apiUrl = 'http://localhost:8000/api';
+        this.currentImageUrl = null;
+        this.currentImageFormat = 'svg';
+        this.sizesById = {};
+        this.previewScale = 1;
+        this.previewMinScale = 0.25;
+        this.previewMaxScale = 12;
+        this.sizeChangeTimer = null;
+        this.isGenerating = false;
+        this.pendingGenerate = false;
+        this.init();
+    }
+
+    async init() {
+        this.updateStats();
+        await this.loadSizes();
+        this.changeSize('46x46', { autoGenerate: false });
+        await this.checkServer();
+
+        document.getElementById('ai-input').addEventListener('input', () => this.updateStats());
+        document.getElementById('qr-position-select').addEventListener('change', () => this.scheduleRealtimeGenerate());
+        document.getElementById('symbols-position-select').addEventListener('change', () => this.scheduleRealtimeGenerate());
+        document.getElementById('symbol-eac').addEventListener('change', () => this.scheduleRealtimeGenerate());
+        document.getElementById('symbol-glass').addEventListener('change', () => this.scheduleRealtimeGenerate());
+        document.getElementById('symbol-pp5').addEventListener('change', () => this.scheduleRealtimeGenerate());
+        document.getElementById('symbol-pet1').addEventListener('change', () => this.scheduleRealtimeGenerate());
+        document.getElementById('symbol-eac-position').addEventListener('change', () => this.scheduleRealtimeGenerate());
+        document.getElementById('symbol-glass-position').addEventListener('change', () => this.scheduleRealtimeGenerate());
+        document.getElementById('symbol-pp5-position').addEventListener('change', () => this.scheduleRealtimeGenerate());
+        document.getElementById('symbol-pet1-position').addEventListener('change', () => this.scheduleRealtimeGenerate());
+    }
+
+    getFallbackSizes() {
+        return [
+            { id: '46x46', name: '46x46 mm', width_mm: 46, height_mm: 46, width_px: 368, height_px: 368 },
+            { id: '48x30', name: '48x30 mm', width_mm: 48, height_mm: 30, width_px: 384, height_px: 240 },
+            { id: '40x20', name: '40x20 mm', width_mm: 40, height_mm: 20, width_px: 320, height_px: 160 },
+            { id: '30x15', name: '30x15 mm', width_mm: 30, height_mm: 15, width_px: 240, height_px: 120 },
+            { id: '43x63', name: '43x63 mm', width_mm: 43, height_mm: 63, width_px: 344, height_px: 504 },
+            { id: '22x22', name: '22x22 mm', width_mm: 22, height_mm: 22, width_px: 176, height_px: 176 },
+            { id: '99.5x99.5', name: '99.5x99.5 mm', width_mm: 99.5, height_mm: 99.5, width_px: 796, height_px: 796 },
+            { id: '20x15', name: '20x15 mm', width_mm: 20, height_mm: 15, width_px: 160, height_px: 120 },
+            { id: '17x15', name: '17x15 mm', width_mm: 17, height_mm: 15, width_px: 136, height_px: 120 },
+            { id: '16x16', name: '16x16 mm', width_mm: 16, height_mm: 16, width_px: 128, height_px: 128 },
+            { id: '58x60', name: '58x60 mm', width_mm: 58, height_mm: 60, width_px: 464, height_px: 480 },
+            { id: '40x15', name: '40x15 mm', width_mm: 40, height_mm: 15, width_px: 320, height_px: 120 },
+            { id: '55x60', name: '55x60 mm', width_mm: 55, height_mm: 60, width_px: 440, height_px: 480 },
+            { id: '50x70', name: '50x70 mm', width_mm: 50, height_mm: 70, width_px: 400, height_px: 560 }
+        ];
+    }
+
+    formatMm(value) {
+        return Number(value).toFixed(1);
+    }
+
+    async loadSizes() {
+        const sizes = this.getFallbackSizes();
+        const select = document.getElementById('label-size-select');
+
+        this.sizesById = {};
+        select.innerHTML = '';
+        sizes.forEach(size => {
+            this.sizesById[size.id] = size;
+            const option = document.createElement('option');
+            option.value = size.id;
+            option.textContent = `${size.name} (${size.width_px}x${size.height_px} px)`;
+            select.appendChild(option);
+        });
+    }
+
+    updateStats() {
+        const text = document.getElementById('ai-input').value;
+        document.getElementById('input-stats').textContent = `${text.length} символов`;
+    }
+
+    async checkServer() {
+        try {
+            const response = await fetch(`${this.apiUrl}/status`);
+            if (response.ok) {
+                this.updateStatus('Сервер подключен', 'success');
+            }
+        } catch {
+            this.updateStatus('Сервер недоступен', 'warning');
+        }
+    }
+
+    switchTab(tab) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+        if (tab === 'input') {
+            document.querySelector('.tab-btn:first-child').classList.add('active');
+            document.querySelector('.input-actions').style.display = 'grid';
+        } else {
+            document.querySelector('.tab-btn:last-child').classList.add('active');
+            document.querySelector('.input-actions').style.display = 'none';
+            document.getElementById('parsed-tab').classList.add('active');
+        }
+    }
+
+    async parseText() {
+        const text = document.getElementById('ai-input').value.trim();
+        if (!text) {
+            this.showMessage('Введите текст', 'warning');
+            return;
+        }
+
+        try {
+            const response = await fetch(`${this.apiUrl}/parse`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ text })
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                this.displayParsedData(data.parsed_data);
+                this.switchTab('parsed');
+                this.showMessage('Текст распознан', 'success');
+            }
+        } catch (error) {
+            this.showMessage('Ошибка распознавания', 'warning');
+        }
+    }
+
+    displayParsedData(data) {
+        let html = '';
+        const fields = [
+            {key: 'product_name', label: 'Название'},
+            {key: 'original_name', label: 'Название оригинальное'},
+            {key: 'product_description', label: 'Описание товара'},
+            {key: 'article_number', label: 'Артикул'},
+            {key: 'manufacturer', label: 'Производитель'},
+            {key: 'country', label: 'Страна'},
+            {key: 'expiry_date', label: 'Срок годности'}
+        ];
+
+        for (const field of fields) {
+            if (data[field.key]) {
+                html += `<div class="parsed-item"><span class="parsed-key">${field.label}:</span> <span class="parsed-value">${data[field.key]}</span></div>`;
+            }
+        }
+
+        if (!html) html = '<div class="parsed-item">Ничего не распознано</div>';
+        document.getElementById('parsed-display').innerHTML = html;
+    }
+
+    changeSize(sizeId, options = {}) {
+        const size = this.sizesById[sizeId];
+        if (!size) return;
+
+        document.getElementById('width-mm').value = this.formatMm(size.width_mm);
+        document.getElementById('height-mm').value = this.formatMm(size.height_mm);
+        document.getElementById('width-px').value = size.width_px;
+        document.getElementById('height-px').value = size.height_px;
+        document.getElementById('selected-info').innerHTML = `Размер: <strong>${size.name}</strong>`;
+
+        this.selectedSize = size.id;
+        document.getElementById('label-size-select').value = size.id;
+
+        const shouldAutoGenerate = options.autoGenerate !== false;
+        if (shouldAutoGenerate) {
+            this.scheduleRealtimeGenerate();
+        }
+    }
+
+    scheduleRealtimeGenerate() {
+        if (this.sizeChangeTimer) {
+            clearTimeout(this.sizeChangeTimer);
+        }
+        this.sizeChangeTimer = setTimeout(() => {
+            this.generate({ silent: true });
+        }, 180);
+    }
+
+    getLayoutOptions() {
+        const symbols = [];
+        const symbolPositions = {};
+        if (document.getElementById('symbol-eac')?.checked) symbols.push('eac');
+        if (document.getElementById('symbol-glass')?.checked) symbols.push('glass');
+        if (document.getElementById('symbol-pp5')?.checked) symbols.push('pp5');
+        if (document.getElementById('symbol-pet1')?.checked) symbols.push('pet1');
+        symbolPositions.eac = document.getElementById('symbol-eac-position')?.value || 'auto';
+        symbolPositions.glass = document.getElementById('symbol-glass-position')?.value || 'auto';
+        symbolPositions.pp5 = document.getElementById('symbol-pp5-position')?.value || 'auto';
+        symbolPositions.pet1 = document.getElementById('symbol-pet1-position')?.value || 'auto';
+
+        return {
+            qr_position: document.getElementById('qr-position-select')?.value || 'auto',
+            symbols_position: document.getElementById('symbols-position-select')?.value || 'auto',
+            graphic_symbols: symbols,
+            symbol_positions: symbolPositions,
+            title_size_multiplier: parseFloat(document.getElementById('title-size-slider')?.value || '3.5'),
+            text_size_multiplier: parseFloat(document.getElementById('text-size-slider')?.value || '1.0')
+        };
+    }
+
+    async generate(options = {}) {
+        const { silent = false } = options;
+        const text = document.getElementById('ai-input').value.trim();
+        if (!text) {
+            if (!silent) {
+                this.showMessage('Введите текст', 'warning');
+            }
+            return;
+        }
+
+        if (this.isGenerating) {
+            this.pendingGenerate = true;
+            return;
+        }
+
+        this.isGenerating = true;
+        try {
+            const layoutOptions = this.getLayoutOptions();
+            const response = await fetch(`${this.apiUrl}/generate`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    text,
+                    size_id: this.selectedSize,
+                    preview_mode: true,
+                    format: 'svg',
+                    qr_position: layoutOptions.qr_position,
+                    symbols_position: layoutOptions.symbols_position,
+                    graphic_symbols: layoutOptions.graphic_symbols,
+                    symbol_positions: layoutOptions.symbol_positions,
+                    title_size_multiplier: layoutOptions.title_size_multiplier,
+                    text_size_multiplier: layoutOptions.text_size_multiplier
+                })
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                this.displayVariant(data.variants[0], data.product_name);
+                if (!silent) {
+                    this.showMessage('Этикетка создана', 'success');
+                }
+            }
+        } catch (error) {
+            if (!silent) {
+                this.showMessage('Ошибка генерации', 'warning');
+            }
+        } finally {
+            this.isGenerating = false;
+            if (this.pendingGenerate) {
+                this.pendingGenerate = false;
+                this.generate({ silent: true });
+            }
+        }
+    }
+
+    displayVariant(variant, productName) {
+        const container = document.getElementById('label-variants');
+        const imageSource = variant.image_data_url || (variant.image_url ? `${variant.image_url}?t=${Date.now()}` : null);
+        this.currentImageUrl = imageSource;
+        this.currentImageFormat = (variant.format || 'png').toLowerCase();
+
+        const html = `
+            <div class="label-variant selected">
+                <div class="variant-header">
+                    <div class="variant-info">
+                        <h3>${variant.name}</h3>
+                        <div class="variant-size">${variant.width_px}x${variant.height_px} px</div>
+                    </div>
+                </div>
+
+                <div class="preview-container" onclick="app.openPreview()">
+                    <img src="${this.currentImageUrl || ''}" alt="Предпросмотр" id="preview-image">
+                    <div class="preview-overlay">
+                        <i class="fas fa-search-plus"></i>
+                        <span>Увеличить</span>
+                    </div>
+                </div>
+
+                <div class="variant-stats">
+                    <div class="stat-item"><i class="fas fa-arrows-alt"></i><span>${variant.width_mm}x${variant.height_mm} мм</span></div>
+                </div>
+
+                <button class="select-btn" onclick="app.downloadCurrent()"><i class="fas fa-file-image"></i> Скачать PNG (HD)</button>
+            </div>
+        `;
+
+        container.innerHTML = html;
+        document.getElementById('product-info').textContent = `Товар: ${productName || 'не указан'}`;
+    }
+
+    async openPreview() {
+    if (!this.currentImageUrl) {
+        this.showMessage('Нет изображения', 'warning');
+        return;
+    }
+
+    const currentText = document.getElementById('ai-input').value;
+
+    try {
+        const layoutOptions = this.getLayoutOptions();
+        const response = await fetch(`${this.apiUrl}/generate`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ 
+                text: currentText, 
+                size_id: this.selectedSize,
+                preview_mode: true,
+                format: 'svg',
+                qr_position: layoutOptions.qr_position,
+                symbols_position: layoutOptions.symbols_position,
+                graphic_symbols: layoutOptions.graphic_symbols,
+                symbol_positions: layoutOptions.symbol_positions,
+                title_size_multiplier: layoutOptions.title_size_multiplier,
+                text_size_multiplier: layoutOptions.text_size_multiplier
+            })
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+            const previewVariant = data.variants[0] || {};
+            const inlinePreview = previewVariant.image_data_url;
+            const filePreview = previewVariant.image_url ? `${previewVariant.image_url}?t=${Date.now()}` : null;
+            const previewSource = inlinePreview || filePreview || this.currentImageUrl;
+            this.currentImageFormat = (previewVariant.format || this.currentImageFormat || 'png').toLowerCase();
+
+            if (filePreview) {
+                this.currentImageUrl = filePreview;
+                const previewImg = document.getElementById('preview-image');
+                if (previewImg) {
+                    previewImg.src = filePreview;
+                }
+            }
+
+            this.showSimplePreview(previewSource);
+        } else {
+            // Если не удалось сгенерировать новую, показываем старую
+            this.showSimplePreview(this.currentImageUrl);
+        }
+    } catch (error) {
+        console.error('Ошибка:', error);
+        // В случае ошибки показываем текущее изображение
+        this.showSimplePreview(this.currentImageUrl);
+    }
+}
+    showSimplePreview(imageUrl) {
+        const oldModal = document.querySelector('.enhanced-modal');
+        if (oldModal) oldModal.remove();
+
+        const size = this.sizesById[this.selectedSize];
+        if (size && size.width_mm <= 22) {
+            this.previewScale = 3.2;
+        } else if (size && size.width_mm <= 40) {
+            this.previewScale = 2.4;
+        } else {
+            this.previewScale = 1.8;
+        }
+        const modal = document.createElement('div');
+        modal.className = 'enhanced-modal';
+        modal.innerHTML = `
+            <div class="enhanced-modal-content">
+                <div class="enhanced-modal-header">
+                    <h3>Preview</h3>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <button class="enhanced-modal-close" id="preview-fullscreen-btn" title="Полный экран">
+                            ⛶
+                        </button>
+                        <button class="enhanced-modal-close" onclick="app.closePreview()">&times;</button>
+                    </div>
+                </div>
+                <div class="enhanced-modal-body" id="preview-modal-body">
+                    <img src="${imageUrl}" class="enhanced-modal-image" id="preview-modal-image" alt="Preview">
+                </div>
+                <div class="enhanced-modal-actions">
+                    <button class="export-btn" id="preview-download-btn">
+                        <i class="fas fa-download"></i> Download
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        const image = modal.querySelector('#preview-modal-image');
+        const body = modal.querySelector('#preview-modal-body');
+        const downloadBtn = modal.querySelector('#preview-download-btn');
+        const fullscreenBtn = modal.querySelector('#preview-fullscreen-btn');
+
+        if (body) {
+            body.addEventListener('wheel', (event) => this.handlePreviewWheel(event), { passive: false });
+            body.addEventListener('dblclick', () => this.togglePreviewFullscreen(modal));
+        }
+        if (image) {
+            image.style.transform = `scale(${this.previewScale})`;
+            image.addEventListener('dblclick', () => this.togglePreviewFullscreen(modal));
+        }
+        if (downloadBtn) {
+            downloadBtn.addEventListener('click', () => this.downloadPreviewImage(imageUrl));
+        }
+        if (fullscreenBtn) {
+            fullscreenBtn.addEventListener('click', () => this.togglePreviewFullscreen(modal));
+        }
+
+        setTimeout(() => modal.classList.add('active'), 10);
+    }
+
+    handlePreviewWheel(event) {
+        event.preventDefault();
+
+        const delta = event.deltaY < 0 ? 0.2 : -0.2;
+        const nextScale = this.previewScale + delta;
+        this.previewScale = Math.min(this.previewMaxScale, Math.max(this.previewMinScale, nextScale));
+
+        const image = document.getElementById('preview-modal-image');
+        if (image) {
+            image.style.transform = `scale(${this.previewScale})`;
+        }
+    }
+
+    closePreview() {
+        const modal = document.querySelector('.enhanced-modal');
+        if (modal) {
+            modal.classList.remove('active');
+            setTimeout(() => modal.remove(), 300);
+        }
+    }
+
+    async togglePreviewFullscreen(element) {
+        try {
+            if (document.fullscreenElement) {
+                await document.exitFullscreen();
+                return;
+            }
+            const target = element || document.querySelector('.enhanced-modal-content');
+            if (target && target.requestFullscreen) {
+                await target.requestFullscreen();
+            }
+        } catch (error) {
+            console.error('Fullscreen error:', error);
+        }
+    }
+
+    async downloadCurrent() {
+        const text = document.getElementById('ai-input').value.trim();
+        if (!text) {
+            this.showMessage('Введите текст', 'warning');
+            return;
+        }
+
+        try {
+            const layoutOptions = this.getLayoutOptions();
+            const response = await fetch(`${this.apiUrl}/generate`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    text,
+                    size_id: this.selectedSize,
+                    preview_mode: false,
+                    format: 'png',
+                    high_quality_png: true,
+                    qr_position: layoutOptions.qr_position,
+                    symbols_position: layoutOptions.symbols_position,
+                    graphic_symbols: layoutOptions.graphic_symbols,
+                    symbol_positions: layoutOptions.symbol_positions,
+                    title_size_multiplier: layoutOptions.title_size_multiplier,
+                    text_size_multiplier: layoutOptions.text_size_multiplier
+                })
+            });
+
+            const data = await response.json();
+            const variant = (data && data.variants && data.variants[0]) ? data.variants[0] : null;
+            if (!data.success || !variant || !variant.image_url) {
+                this.showMessage('Ошибка генерации PNG', 'warning');
+                return;
+            }
+
+            const link = document.createElement('a');
+            link.href = `${variant.image_url}?t=${Date.now()}`;
+            link.download = variant.filename || `label_${this.selectedSize}.png`;
+            link.click();
+            this.showMessage('Скачивание PNG (HD) началось', 'success');
+        } catch (error) {
+            this.showMessage('Ошибка скачивания PNG', 'warning');
+        }
+    }
+
+    async downloadSvg() {
+        const text = document.getElementById('ai-input').value.trim();
+        if (!text) {
+            this.showMessage('Введите текст', 'warning');
+            return;
+        }
+
+        try {
+            const layoutOptions = this.getLayoutOptions();
+            const response = await fetch(`${this.apiUrl}/generate`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    text,
+                    size_id: this.selectedSize,
+                    preview_mode: false,
+                    format: 'svg',
+                    qr_position: layoutOptions.qr_position,
+                    symbols_position: layoutOptions.symbols_position,
+                    graphic_symbols: layoutOptions.graphic_symbols,
+                    symbol_positions: layoutOptions.symbol_positions,
+                    title_size_multiplier: layoutOptions.title_size_multiplier,
+                    text_size_multiplier: layoutOptions.text_size_multiplier
+                })
+            });
+
+            const data = await response.json();
+            const variant = (data && data.variants && data.variants[0]) ? data.variants[0] : null;
+            if (!data.success || !variant || !variant.image_url) {
+                this.showMessage('Ошибка генерации SVG', 'warning');
+                return;
+            }
+
+            const link = document.createElement('a');
+            link.href = `${variant.image_url}?t=${Date.now()}`;
+            link.download = variant.filename || `label_${this.selectedSize}.svg`;
+            link.click();
+            this.showMessage('Скачивание SVG началось', 'success');
+        } catch (error) {
+            this.showMessage('Ошибка скачивания SVG', 'warning');
+        }
+    }
+
+    downloadPreviewImage(imageUrl) {
+        const source = imageUrl || this.currentImageUrl || '';
+        if (!source) {
+            this.showMessage('No image', 'warning');
+            return;
+        }
+
+        const ext = this.currentImageFormat === 'svg' ? 'svg' : 'png';
+        const downloadUrl = source.startsWith('data:image/')
+            ? source
+            : source.split('?')[0];
+
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = `preview_${this.selectedSize}.${ext}`;
+        link.click();
+        this.showMessage('Download started', 'success');
+    }
+
+    printLabel() {
+        if (!this.currentImageUrl) {
+            this.showMessage('Нет этикетки', 'warning');
+            return;
+        }
+        window.open(this.currentImageUrl.split('?')[0]);
+    }
+
+    clearInput() {
+        document.getElementById('ai-input').value = '';
+        this.updateStats();
+        this.showMessage('Текст очищен');
+    }
+
+    loadTemplate(type) {
+        const templates = {
+            juice: 'Товар: Апельсиновый сок 200 мл\nСостав: апельсиновый сок, сахар\nСтрана: Бразилия',
+            cream: 'Товар: Крем для лица 50 мл\nСостав: вода, глицерин\nСтрана: Франция'
+        };
+        document.getElementById('ai-input').value = templates[type] || '';
+        this.updateStats();
+    }
+
+    updateStatus(text, type = 'success') {
+        document.getElementById('status-text').textContent = text;
+        const dot = document.getElementById('status-dot');
+        dot.classList.toggle('warning', type === 'warning');
+    }
+
+    showMessage(text, type = 'info') {
+        console.log(text);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    window.app = new LabelFlowApp();
+});
+</script>
+</body>
+</html>
